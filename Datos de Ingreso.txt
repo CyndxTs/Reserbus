@@ -1,0 +1,11 @@
+[#] VIAJERO:
+	USER:		"viajero@example.com"
+	PASSWORD:	"12345678"
+
+[#] EMPRESA:
+	USER:		"empresa@example.com"
+	PASSWORD:	"12345678"
+
+[#] ADMINISTRADOR:
+	USER:		"administrador@example.com"
+	PASSWORD:	"12345678"
