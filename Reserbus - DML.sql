@@ -88,28 +88,27 @@ INSERT INTO EMPRESA (correo_electronico, contrasenia, razon_social, ruc, descrip
 ('empresa@example.com', '$2b$10$vxRvGLUDXMic2xH8RJoI5uAMF8E.tWb84sPYq5NLhF1c8g0/wov0y', 'Empresa S.A.C.', '20100070970', 'abcde', NULL);
 
 
-INSERT INTO BUS (placa, marca, modelo, id_empresa) VALUES
-('AV 3637 VD', 'PLC', 'exercitationem', 19),
-('7403 RSC', 'Group', 'ad', 7),
-('4875 WSJ', 'LLC', 'dicta', 10),
-('9373 LYH', 'Ltd', 'laboriosam', 19),
-('4743 WRK', 'Group', 'repellat', 2),
-('7265 RGB', 'and Sons', 'suscipit', 19),
-('CS 2899 CF', 'Group', 'nostrum', 20),
-('9823 VMD', 'Ltd', 'ducimus', 2),
-('4707 WSR', 'Ltd', 'fugit', 14),
-('2041 SNW', 'PLC', 'quo', 2),
-('2552 ZYS', 'PLC', 'dolores', 2),
-('AL 6699 ZA', 'Inc', 'culpa', 10),
-('Z 3231 GW', 'LLC', 'soluta', 6),
-('3348 HPD', 'LLC', 'unde', 7),
-('TF 9053 ZH', 'Ltd', 'non', 19),
-('L 4337 NH', 'Group', 'alias', 18),
-('BA 8471 FN', 'Inc', 'deleniti', 16),
-('TF 3959 GB', 'and Sons', 'nemo', 7),
-('BI 3458 CH', 'Inc', 'eius', 14),
-('0401 PSK', 'PLC', 'facere', 4);
-
+INSERT INTO BUS (placa, marca, modelo, cantidad_pisos, id_empresa) VALUES
+('AV 3637 VD', 'PLC', 'exercitationem', 2, 9),
+('7403 RSC', 'Group', 'ad', 1, 7),
+('4875 WSJ', 'LLC', 'dicta', 3, 10),
+('9373 LYH', 'Ltd', 'laboriosam', 1, 19),
+('4743 WRK', 'Group', 'repellat', 2, 2),
+('7265 RGB', 'and Sons', 'suscipit', 1, 19),
+('CS 2899 CF', 'Group', 'nostrum', 3, 20),
+('9823 VMD', 'Ltd', 'ducimus', 2, 2),
+('4707 WSR', 'Ltd', 'fugit', 3, 14),
+('2041 SNW', 'PLC', 'quo', 1, 2),
+('2552 ZYS', 'PLC', 'dolores', 2, 2),
+('AL 6699 ZA', 'Inc', 'culpa', 1, 10),
+('Z 3231 GW', 'LLC', 'soluta', 3, 6),
+('3348 HPD', 'LLC', 'unde', 2, 7),
+('TF 9053 ZH', 'Ltd', 'non', 1, 19),
+('L 4337 NH', 'Group', 'alias', 2, 18),
+('BA 8471 FN', 'Inc', 'deleniti', 3, 16),
+('TF 3959 GB', 'and Sons', 'nemo', 2, 7),
+('BI 3458 CH', 'Inc', 'eius', 1, 14),
+('0401 PSK', 'PLC', 'facere', 3, 4);
 
 
 INSERT INTO SERVICIO (nombre, descripcion) VALUES

@@ -1,10 +1,12 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
+
 import './AdminHome.css';
 import { useClient } from '../context/ClientContext';
 
 function AdminHome() {
   const { client, clientType } = useClient();
-
+  const navigate = useNavigate();
   const admin = clientType === 'ADMINISTRADOR' ? client : null;
 
   return (
@@ -33,6 +35,7 @@ function AdminHome() {
         <button className="primary-button">Añadir Usuario</button>
         <button className="primary-button">Modificar Usuario</button>
         <button className="primary-button">Eliminar Usuario</button>
+      
       </main>
     </div>
   );

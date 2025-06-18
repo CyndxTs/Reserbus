@@ -31,7 +31,8 @@ module.exports = (sequelize, DataTypes) => {
       through: models.BusServicio,
       foreignKey: 'id_servicio',
       otherKey: 'id_bus',
-      onDelete: 'CASCADE'
+      onDelete: 'CASCADE',
+      as: 'buses'
     });
   };
 
