@@ -1,7 +1,7 @@
 {
   "development": {
-    "username": "Candy",
-    "password": "SQLo.0?!",
+    "username": "root",
+    "password": "Kimnamjoon12/",
     "database": "reserbus",
     "host": "127.0.0.1",
     "dialect": "mysql"

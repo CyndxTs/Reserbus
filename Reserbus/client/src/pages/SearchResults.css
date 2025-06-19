@@ -1,0 +1,77 @@
+.results-layout {
+  display: flex;
+  gap: 2rem;
+  padding: 2rem;
+}
+
+.filtros {
+  width: 250px;
+  font-size: 14px;
+}
+
+.filtros h3 {
+  margin-top: 20px;
+  font-weight: 600;
+}
+
+.filtros ul {
+  list-style: none;
+  padding-left: 0;
+}
+
+.filtros li {
+  margin: 5px 0;
+}
+
+.resultados {
+  flex: 1;
+}
+
+.resultados-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.viajes-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.viaje-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.card-etiqueta {
+  font-weight: bold;
+  color: #ffa500;
+}
+
+.card-info {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+}
+
+.horarios {
+  text-align: center;
+}
+
+.duracion {
+  font-size: 14px;
+  color: #777;
+}
+
+.precio {
+  text-align: right;
+  font-weight: bold;
+  color: #333;
+}

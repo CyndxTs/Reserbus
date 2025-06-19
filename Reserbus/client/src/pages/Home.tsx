@@ -1,5 +1,6 @@
 import { useClient } from '../context/ClientContext';
 import { formattedClientName,SignInValues,SignUpValues } from '../util/ClientUtil';
+import { SearchValues } from '../util/BuscarViajeUtil';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Formik, Form, Field, ErrorMessage, FormikHelpers } from 'formik';
@@ -7,6 +8,7 @@ import * as Yup from 'yup';
 import axios from 'axios';
 import { AxiosError } from 'axios';
 import './Home.css';
+import Header from '../Components/Header';
 
 function Home() {
   const navigate = useNavigate();
@@ -103,39 +105,53 @@ function Home() {
     logout();
   };
 
+  const SearchSchema = Yup.object().shape({
+  origen: Yup.string().required('Campo requerido'),
+  destino: Yup.string().required('Campo requerido'),
+  salida: Yup.date().required('Fecha requerida'),
+  regreso: Yup.date()
+    .nullable()
+    .notRequired()
+    .when('salida', (salida, schema) => {
+      // Solo aplicar min() si salida es una fecha válida
+      return Array.isArray(salida) || !salida || isNaN(new Date(salida).getTime())
+        ? schema
+        : schema.min(salida, 'La fecha de regreso debe ser posterior a la de salida');
+    }),
+  pasajeros: Yup.number()
+    .min(1, 'Mínimo 1 pasajero')
+    .required('Campo requerido'),
+  });
+
+  const handleSearch = async (values: SearchValues, { setSubmitting, setFieldError }:FormikHelpers<SearchValues>) => {
+    console.log("Formulario enviado con valores:", values);
+    try {
+      const searchParams = {
+        origen: values.origen,
+        destino: values.destino,
+        fecha_salida: values.salida,
+        fecha_regreso: values.regreso || null,
+        pasajeros: values.pasajeros
+      };
+      const response = await axios.get('/api/viajes/buscar', { 
+        params: searchParams 
+      });
+      navigate('/resultados', { 
+        state: { 
+          viajes: response.data.viajes,
+          parametros: searchParams
+        } 
+      });
+    } catch (e) {
+      console.error('Error en la búsqueda:', e);
+    } finally {
+      setSubmitting(false);
+    }
+  };
   return (
     <div>
-      {/* Barra de navegacion */}
-      <div className="navbar">
-        <div className="navbar-logo">
-          <img src="/RB_LogoWhite.png" alt="icon-reserbus"/>
-          <span>reserbus</span>
-        </div>
-        <div className="navbar-links">
-          <button>Contacto</button>
-          <button>Acerca de nosotros</button>
-          <div className="client-menu-wrapper">
-            <button className="open-modal-signin" onClick={() => { if(!client) setShowSignInModal(true); }}>
-              {!client ? (
-                <>
-                  <span>Iniciar</span>
-                  <img src="/Icon_Account.svg" alt="user-profile" className="profile-icon" />
-                </>
-              ) : (
-                <>
-                  <span className="client-name">{formattedClientName(client)}</span>
-                </>
-              )}
-            </button>
-            {client && (
-              <div className="client-menu-ddl">
-                <button>Cuenta</button>
-                <button onClick={handleSignOut}>Cerrar sesión</button>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
+      {/* componente Header */}
+      <Header onOpenSignIn={() => setShowSignInModal(true)} />
       {/* Slogan */}
       <div className="slogan">
         <div className="slogan-title">
@@ -145,27 +161,54 @@ function Home() {
           Llega a tu destino en el bus que necesites, cuando lo necesites y al mejor precio
         </div>
       </div>
-      {/* Search */}
-      <div className="search">
+      
+      {/* Buscar viajes según parametros */}
+      <Formik
+        initialValues={{
+        origen: '',
+        destino: '',
+        salida: '',
+        regreso: '',
+        pasajeros: 1,
+        }}
+        validationSchema={SearchSchema}
+        onSubmit={handleSearch}
+      >
+      {({ isValid }) => (
+      <Form className="search">
         <div className="search-item">
-            <input type="text" placeholder="Desde"/>
+          <label htmlFor="origen" className="search-label">Origen</label>
+          <Field type="text" name="origen" placeholder="Agregue su origen..." />
+          <ErrorMessage name="origen" component="div" className="field-error" />
         </div>
         <div className="search-item">
-            <input type="text" placeholder="Hasta"/>
+          <label htmlFor="destino" className="search-label">Destino</label>
+          <Field type="text" name="destino" placeholder="Agregue su destino..." />
+          <ErrorMessage name="destino" component="div" className="field-error" />
         </div>
         <div className="search-item">
-            <input type="date"/>
+          <label htmlFor="salida" className="search-label">Fecha de salida</label>
+          <Field type="date" name="salida" />
+          <ErrorMessage name="salida" component="div" className="field-error" />
         </div>
         <div className="search-item">
-            <input type="date"/>
+          <label htmlFor="regreso" className="search-label">Fecha de retorno (opcional)</label>
+          <Field type="date" name="regreso" />
+          <ErrorMessage name="regreso" component="div" className="field-error" />
         </div>
         <div className="search-item">
-            <input type="number" placeholder="Pasajeros"/>
+          <label htmlFor="pasajeros" className="search-label">Num. Pasajeros</label>
+          <Field type="number" name="pasajeros" placeholder="Pasajeros" min="1" />
+          <ErrorMessage name="pasajeros" component="div" className="field-error" />
         </div>
-        <button>
-          <img src="/Icon_Search.svg" alt="icon-search"/>
+        <button type="submit" disabled={!isValid}>
+        <img src="/Icon_Search.svg" alt="icon-search"/>
         </button>
-      </div>
+      </Form>
+      )}
+      </Formik>  
+
+
       {/* Features */}
       <div className="features">
         <div className="features-content">
