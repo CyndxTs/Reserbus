@@ -46,6 +46,7 @@ interface BusContextType {
   getBus: (idBus: number) => Promise<Bus>;
   createBus: (busData: Omit<Bus, 'id_bus'>, serviciosIds: number[]) => Promise<Bus>;
   updateBus: (idBus: number, busData: Partial<Bus>, serviciosIds?: number[]) => Promise<void>;
+  deleteBus: (idBus: number) => Promise<void>;
   toggleBusStatus: (idBus: number) => Promise<void>;
   
   // Funciones para servicios
@@ -131,7 +132,7 @@ export const BusProvider = ({ children }: { children: ReactNode }) => {
     setLoading(true);
     try {
       const payload = serviciosIds ? { ...busData, servicios: serviciosIds } : busData;
-      const response = await axios.patch(`/api/buses/${idBus}`, payload);
+      const response = await axios.put(`/api/buses/${idBus}`, payload);
       
       setBuses(prev => prev.map(bus => 
         bus.id_bus === idBus ? response.data : bus
@@ -146,6 +147,24 @@ export const BusProvider = ({ children }: { children: ReactNode }) => {
       setLoading(false);
     }
   };
+
+  const deleteBus = async (idBus: number) => {
+  setLoading(true);
+  try {
+    await axios.delete(`/api/buses/${idBus}`);
+
+    // Opcional: refrescar lista completa
+    setBuses(prev => prev.filter(bus => bus.id_bus !== idBus));
+
+    setError(null);
+  } catch (err) {
+    setError('Error al eliminar el bus');
+    console.error(err);
+    throw err;
+  } finally {
+    setLoading(false);
+  }
+};
 
   const toggleBusStatus = async (idBus: number) => {
     setLoading(true);
@@ -255,6 +274,7 @@ export const BusProvider = ({ children }: { children: ReactNode }) => {
       getBus,
       createBus,
       updateBus,
+      deleteBus,
       toggleBusStatus,
       fetchServicios,
       getServiciosByBus,

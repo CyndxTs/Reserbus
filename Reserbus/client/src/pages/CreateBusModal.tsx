@@ -1,5 +1,5 @@
 import { Formik, Form, Field, ErrorMessage } from 'formik';
-import { useBus } from '../context/BusContext';
+import { Bus, useBus } from '../context/BusContext';
 import { CreateBusSchema, cantidadPisosOptions } from '../util/BusUtil';
 import './CreateBusModal.css';
 
@@ -9,23 +9,42 @@ interface CreateBusModalProps {
   onClose: () => void;
   onSuccess?: () => void;
   idEmpresa: Number;
+  busAEditar?: Bus | null;
 }
 
-const CreateBusModal = ({ onClose, onSuccess, idEmpresa  }: CreateBusModalProps) => {
-  const { createBus, servicios, loading } = useBus();
+const CreateBusModal = ({ onClose, onSuccess, idEmpresa, busAEditar  }: CreateBusModalProps) => {
+  const { createBus, updateBus, servicios, loading } = useBus();
 
-  const initialValues = {
+  const initialValues = busAEditar ? {
+    placa: busAEditar.placa,
+    marca: busAEditar.marca,
+    modelo: busAEditar.modelo,
+    cantidad_pisos: busAEditar.cantidad_pisos,
+    id_empresa: busAEditar.id_empresa,
+    servicios: (busAEditar.BusServicios || []).map(bs => bs.id_servicio)
+  } : {
     placa: '',
     marca: '',
     modelo: '',
     cantidad_pisos: 1,
-    id_empresa: 0,
-    servicios: [] as number[]
+    id_empresa: Number(idEmpresa),
+    servicios: []
   };
 
   const handleSubmit = async (values: typeof initialValues) => {
     try {
       console.log("Valores que se enviarán:", values);
+
+      if (busAEditar) {
+        console.log("Editando bus ID:", busAEditar.id_bus);
+        await updateBus(busAEditar.id_bus, {
+          placa: values.placa,
+          marca: values.marca,
+          modelo: values.modelo,
+          cantidad_pisos: values.cantidad_pisos
+        }, values.servicios);
+        console.log("Bus actualizado correctamente");
+      } else {
 
       await createBus(
         {
@@ -37,7 +56,7 @@ const CreateBusModal = ({ onClose, onSuccess, idEmpresa  }: CreateBusModalProps)
           esta_habilitado: true
         },
         values.servicios
-      );
+      )};
       
       console.log("Bus creado");
     
@@ -58,7 +77,9 @@ const CreateBusModal = ({ onClose, onSuccess, idEmpresa  }: CreateBusModalProps)
     <div className="modal-overlay-bus">
       <div className="modal-content-bus">
         <button className="close-bus-modal" onClick={onClose}>×</button>
-        <h2 className="modal-title-bus">Registrar Nuevo Bus</h2>
+        <h2 className="modal-title-bus">
+          {busAEditar ? 'Editar Bus' : 'Registrar Nuevo Bus'}
+        </h2>
         
         <Formik
           initialValues={initialValues}
@@ -184,7 +205,7 @@ const CreateBusModal = ({ onClose, onSuccess, idEmpresa  }: CreateBusModalProps)
                 className="submit-button-bus"
                 disabled={loading || !isValid}
               >
-                {loading ? 'Registrando...' : 'Registrar Bus'}
+                {loading ? 'Guardando...' : busAEditar ? 'Guardar Cambios' : 'Registrar Bus'}
               </button>
             </Form>
           )}

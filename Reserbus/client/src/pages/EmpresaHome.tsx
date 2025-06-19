@@ -4,12 +4,29 @@ import './EmpresaHome.css';
 import { useClient } from '../context/ClientContext';
 import { Empresa } from '../context/ClientContext';
 import CreateBusModal from '../pages/CreateBusModal';
+import { Bus, useBus } from '../context/BusContext';
+import ConfirmModal from '../modals/ConfirmModal';
 
 function EmpresaHome() {
   const { client, clientType } = useClient();
   const [showBusModal, setShowBusModal] = useState(false);
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
   const empresa = clientType === 'EMPRESA' ? client as Empresa : null;
+
+  const { buses, fetchBuses } = useBus();
+  const [selectedBus, setSelectedBus] = useState<Bus | null>(null);
+  const { deleteBus } = useBus();
+  const [busAEliminar, setBusAEliminar] = useState<Bus | null>(null);
+
+  // Cargar buses al montar el componente
+  useEffect(() => {
+    console.log("Empresa cargada", empresa)
+    if (empresa) {
+      fetchBuses(empresa.id_empresa);
+      console.log("Buses cargados:", buses);
+    }
+  }, [empresa]);
+
 
   // Ocultar popup después de 3 segundos
   useEffect(() => {
@@ -18,6 +35,19 @@ function EmpresaHome() {
       return () => clearTimeout(timer);
     }
   }, [showSuccessPopup]);
+
+  const handleEliminarBus = async (id: number) => {
+    if (!window.confirm("¿Estás seguro de eliminar este bus?")) return;
+
+    try {
+      await deleteBus(id);
+      if(empresa) {
+        fetchBuses(empresa.id_empresa); // refrescar la lista
+      }
+    } catch (error) {
+      alert("Error al eliminar el bus.");
+    }
+  };
 
   return (
     <div className="empresa-home">
@@ -59,17 +89,41 @@ function EmpresaHome() {
         >
           Añadir Bus
         </button>
-        <button className="primary-button">Modificar</button>
-        <button className="primary-button">Eliminar</button>
-
-        {showBusModal && empresa && (
-          <CreateBusModal 
-            onClose={() => setShowBusModal(false)}
-            onSuccess={() => {
-              setShowBusModal(false); // Cierra el modal
-              setShowSuccessPopup(true); // Muestra popup de éxito
+        <ul>
+          {buses.map(bus => (
+            <li key={bus.id_bus}>
+              {bus.placa} - {bus.marca} {bus.modelo} - {bus.cantidad_pisos} piso(s)
+              <button onClick={() => setSelectedBus(bus)}>Editar</button>
+              <button onClick={() => setBusAEliminar(bus)}>Eliminar</button>
+            </li>
+          ))}
+        </ul>
+        {busAEliminar && (
+          <ConfirmModal
+            message={`¿Estás seguro de eliminar el bus ${busAEliminar.placa}?`}
+            onConfirm={async () => {
+              await deleteBus(busAEliminar.id_bus);
+              setBusAEliminar(null);
+              if (empresa) fetchBuses(empresa.id_empresa);
             }}
-             idEmpresa={empresa.id_empresa}
+            onCancel={() => setBusAEliminar(null)}
+          />
+        )}
+
+        {(showBusModal || selectedBus) && empresa && (
+          <CreateBusModal
+            onClose={() => {
+              setShowBusModal(false);
+              setSelectedBus(null);
+            }}
+            onSuccess={() => {
+              setShowBusModal(false);
+              setSelectedBus(null);
+              setShowSuccessPopup(true);
+              fetchBuses(empresa.id_empresa); // refresca la lista
+            }}
+            idEmpresa={empresa.id_empresa}
+            busAEditar={selectedBus}
           />
         )}
       </main>
