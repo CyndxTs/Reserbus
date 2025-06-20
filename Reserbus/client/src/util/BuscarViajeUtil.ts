@@ -29,6 +29,7 @@ export interface Viaje {
   instante_abordaje: string;
   instante_partida: string;
   instante_llegada: string;
+  duracion_estimada_minutos: number;
   empresa: Empresa;
   ruta: Ruta;
   tarifas: Tarifa[];

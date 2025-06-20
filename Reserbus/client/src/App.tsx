@@ -1,6 +1,6 @@
 import './App.css';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
-import { ClientProvider } from './context/ClientContext'; // importa tu Provider
+import { ClientProvider } from './context/ClientContext'; 
 import Home from './pages/Home';
 import EmpresaHome from './pages/EmpresaHome';
 import AdminHome from './pages/AdminHome';
