@@ -11,6 +11,7 @@ function EmpresaHome() {
   const { client, clientType } = useClient();
   const [showBusModal, setShowBusModal] = useState(false);
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
   const empresa = clientType === 'EMPRESA' ? client as Empresa : null;
 
   const { buses, fetchBuses } = useBus();
@@ -35,7 +36,22 @@ function EmpresaHome() {
       return () => clearTimeout(timer);
     }
   }, [showSuccessPopup]);
-
+  const handleSuccess = (action: 'create' | 'update' | 'delete') => {
+    let message = "";
+    switch(action) {
+      case 'create':
+        message = "Bus creado correctamente ✅";
+        break;
+      case 'update':
+        message = "Bus actualizado correctamente ✅";
+        break;
+      case 'delete':
+        message = "Bus eliminado correctamente ✅";
+        break;
+    }
+    setSuccessMessage(message);
+    setShowSuccessPopup(true);
+  };
   const handleEliminarBus = async (id: number) => {
     if (!window.confirm("¿Estás seguro de eliminar este bus?")) return;
 
@@ -55,7 +71,7 @@ function EmpresaHome() {
       {/* ✅ Popup de éxito */}
       {showSuccessPopup && (
         <div className="success-popup">
-          Bus creado correctamente ✅
+          {successMessage}
         </div>
       )}
        <header className="header">
@@ -104,7 +120,10 @@ function EmpresaHome() {
             onConfirm={async () => {
               await deleteBus(busAEliminar.id_bus);
               setBusAEliminar(null);
-              if (empresa) fetchBuses(empresa.id_empresa);
+              if (empresa){
+                fetchBuses(empresa.id_empresa);
+                handleSuccess('delete');
+              }
             }}
             onCancel={() => setBusAEliminar(null)}
           />
@@ -121,6 +140,7 @@ function EmpresaHome() {
               setSelectedBus(null);
               setShowSuccessPopup(true);
               fetchBuses(empresa.id_empresa); // refresca la lista
+              handleSuccess(selectedBus ? 'update' : 'create');
             }}
             idEmpresa={empresa.id_empresa}
             busAEditar={selectedBus}
