@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import './EmpresaHome.css';
 import { useClient } from '../context/ClientContext';
 import { Empresa } from '../context/ClientContext';
-import CreateBusModal from '../pages/CreateBusModal';
+import CreateBusModal from '../modals/CreateBusModal';
 import { Bus, useBus } from '../context/BusContext';
 import ConfirmModal from '../modals/ConfirmModal';
 
