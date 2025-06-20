@@ -9,9 +9,10 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1rem 2rem;
+  padding: 0.3rem 2rem;
   border-bottom: 1px solid #eee;
-  background-color: #fff;
+  background-color: #ffffff;
+  background: white;
 }
 
 .brand {
@@ -23,6 +24,7 @@
   width: 40px;
   height: 40px;
   margin-right: 0.5rem;
+  background-color: #3b0fd6;
 }
 
 .brand-name {
@@ -62,7 +64,7 @@
   position: fixed;
   top: 80px;
   left: 0;
-  width: 80px;
+  width: 200px;
   height: calc(100% - 80px);
   background-color: white;
   border-right: 1px solid #eee;
