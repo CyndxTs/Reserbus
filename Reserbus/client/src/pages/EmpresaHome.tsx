@@ -12,6 +12,7 @@ function EmpresaHome() {
   const [showBusModal, setShowBusModal] = useState(false);
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const empresa = clientType === 'EMPRESA' ? client as Empresa : null;
 
   const { buses, fetchBuses } = useBus();
@@ -65,6 +66,14 @@ function EmpresaHome() {
     }
   };
 
+  // Filtrar información de buses (para el buscador)
+  const filteredBuses = buses.filter(bus => 
+    bus.placa.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    bus.marca.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    bus.modelo.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+
   return (
     <div className="empresa-home">
       
@@ -98,25 +107,94 @@ function EmpresaHome() {
       </aside>
 
       <main className="main-content">
-        <h1>Gestión de Empresa</h1>
-        <button 
-          className="primary-button" 
-          onClick={() => setShowBusModal(true)}
-        >
-          Añadir Bus
-        </button>
-        <ul>
-          {buses.map(bus => (
-            <li key={bus.id_bus}>
-              {bus.placa} - {bus.marca} {bus.modelo} - {bus.cantidad_pisos} piso(s)
-              <button onClick={() => setSelectedBus(bus)}>Editar</button>
-              <button onClick={() => setBusAEliminar(bus)}>Eliminar</button>
-            </li>
-          ))}
-        </ul>
+        {/* Page Header */}
+        <div className="page-header">
+          <div className="page-header-actions">
+            <h1>Gestión de Buses</h1>
+            <button 
+              className="primary-button" 
+              onClick={() => setShowBusModal(true)}
+            >
+              <span>+ </span>
+              Añadir Bus
+            </button>
+          </div>
+        </div>
+        {/* Search Container */}
+        <div className="search-container">
+          <div className="search-input-container">
+            <img className="search-icon" src="Search.svg" alt="Buscar" />
+            <input
+              type="text"
+              className="search-input"
+              placeholder="Buscar por placa, marca o modelo..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+        </div>
+        <p className="buses-count">
+          {filteredBuses.length} {filteredBuses.length === 1 ? 'bus encontrado' : 'buses encontrados'}
+        </p>
+        {/* Bus Table Card */}
+        <div className="table-card">
+          {filteredBuses.length === 0 ? (
+            <div className="empty-state">
+              <p>No se encontraron buses</p>
+            </div>
+          ) : (
+            <div className="bus-table">
+              {/* Table Header */}
+              <div className="table-header">
+                <div className="header-cell placa-header">PLACA</div>
+                <div className="header-cell modelo-header">MODELO/MARCA</div>
+                <div className="header-cell pisos-header">PISOS</div>
+                <div className="header-cell acciones-header">ACCIONES</div>
+              </div>
+              
+              {/* Table Body */}
+              <div className="table-body">
+                {filteredBuses.map(bus => (
+                  <div key={bus.id_bus} className="table-row">
+                    <div className="table-cell placa-cell">
+                      <span className="bus-placa">{bus.placa}</span>
+                    </div>
+                    <div className="table-cell modelo-cell">
+                      <span className="bus-marca">{bus.marca}</span><span>/</span>
+                      <span className="bus-modelo">{bus.modelo}</span>
+                    </div>
+                    <div className="table-cell pisos-cell">
+                      {bus.cantidad_pisos} piso(s)
+                    </div>
+                    <div className="table-cell acciones-cell">
+                      <div className="bus-actions">
+                        <button 
+                          className="action-button edit-button"
+                          onClick={() => setSelectedBus(bus)}
+                        >
+                          <img src="Edit.png" alt="Editar" />
+                        </button>
+                        <button 
+                          className="action-button delete-button"
+                          onClick={() => setBusAEliminar(bus)}
+                        >
+                          <img src="Delete.png" alt="Eliminar" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+        {/* Confirmación de eliminación de bus */}
         {busAEliminar && (
           <ConfirmModal
+            title="Eliminar Bus"
             message={`¿Estás seguro de eliminar el bus ${busAEliminar.placa}?`}
+            primaryButtonText="Sí, seguro"
+            secondaryButtonText="Volver"
             onConfirm={async () => {
               await deleteBus(busAEliminar.id_bus);
               setBusAEliminar(null);
