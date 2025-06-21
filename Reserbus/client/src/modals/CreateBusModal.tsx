@@ -15,13 +15,13 @@ interface CreateBusModalProps {
 const CreateBusModal = ({ onClose, onSuccess, idEmpresa, busAEditar  }: CreateBusModalProps) => {
   const { createBus, updateBus, servicios, loading } = useBus();
 
-  const initialValues = busAEditar ? {
+ const initialValues = busAEditar ? {
     placa: busAEditar.placa,
     marca: busAEditar.marca,
     modelo: busAEditar.modelo,
     cantidad_pisos: busAEditar.cantidad_pisos,
     id_empresa: busAEditar.id_empresa,
-    servicios: (busAEditar.BusServicios || []).map(bs => bs.id_servicio)
+    servicios: busAEditar.servicios ? busAEditar.servicios.map(s => s.id_servicio) : []
   } : {
     placa: '',
     marca: '',

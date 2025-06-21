@@ -23,7 +23,7 @@ export interface Bus {
   cantidad_pisos: number;
   id_empresa: number;
   esta_habilitado: boolean;
-  BusServicios?: BusServicio[];
+  servicios?: Servicio[];  
   Pisos?: Piso[];
 }
 
@@ -72,38 +72,32 @@ export const BusProvider = ({ children }: { children: ReactNode }) => {
 
   // Funciones para buses
   const fetchBuses = async (idEmpresa: number) => {
-    setLoading(true);
-    try {
-      const response = await axios.get(`/api/empresas/${idEmpresa}/buses`, {
-        params: { include: ['BusServicios', 'Pisos'] }
-      });
-      setBuses(response.data);
-      setError(null);
-    } catch (err) {
-      setError('Error al obtener los buses');
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  setLoading(true);
+  try {
+    const response = await axios.get(`/api/empresas/${idEmpresa}/buses`, {
+      params: { 
+        include: ['servicios', 'Pisos'] // Asegúrate de incluir esto
+      }
+    });
+    setBuses(response.data);
+  } finally {
+    setLoading(false);
+  }
+};
+  
 
-  const getBus = async (idBus: number) => {
-    setLoading(true);
-    try {
-      const response = await axios.get(`/api/buses/${idBus}`, {
-        params: { include: ['BusServicios.Servicio', 'Pisos'] }
-      });
-      setCurrentBus(response.data);
-      setError(null);
-      return response.data;
-    } catch (err) {
-      setError('Error al obtener el bus');
-      console.error(err);
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  };
+ const getBus = async (idBus: number) => {
+  setLoading(true);
+  try {
+    const response = await axios.get(`/api/buses/${idBus}`, {
+      params: { include: ['servicios', 'Pisos'] }
+    });
+    setCurrentBus(response.data);
+    return response.data;
+  } finally {
+    setLoading(false);
+  }
+};
 
   const createBus = async (busData: Omit<Bus, 'id_bus'>, serviciosIds: number[]) => {
     setLoading(true);
@@ -129,24 +123,26 @@ export const BusProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const updateBus = async (idBus: number, busData: Partial<Bus>, serviciosIds?: number[]) => {
-    setLoading(true);
-    try {
-      const payload = serviciosIds ? { ...busData, servicios: serviciosIds } : busData;
-      const response = await axios.put(`/api/buses/${idBus}`, payload);
-      
-      setBuses(prev => prev.map(bus => 
-        bus.id_bus === idBus ? response.data : bus
-      ));
-      setCurrentBus(response.data);
-      setError(null);
-    } catch (err) {
-      setError('Error al actualizar el bus');
-      console.error(err);
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  };
+  setLoading(true);
+  try {
+    const payload = {
+      ...busData,
+      servicios: serviciosIds || [] // Asegura que siempre se envíe un array
+    };
+
+    const response = await axios.put(`/api/buses/${idBus}`, payload);
+    
+    // Actualiza el estado
+    setBuses(prev => prev.map(bus => 
+      bus.id_bus === idBus ? response.data : bus
+    ));
+    setCurrentBus(response.data);
+    
+    return response.data; // Devuelve los datos actualizados
+  } finally {
+    setLoading(false);
+  }
+};
 
   const deleteBus = async (idBus: number) => {
   setLoading(true);
@@ -228,7 +224,7 @@ export const BusProvider = ({ children }: { children: ReactNode }) => {
       if (servicio) {
         setCurrentBus(prev => prev ? {
           ...prev,
-          BusServicios: [...(prev.BusServicios || []), { id_bus: idBus, id_servicio: idServicio, Servicio: servicio }]
+          BusServicios: [...(prev.servicios || []), { id_bus: idBus, id_servicio: idServicio, Servicio: servicio }]
         } : null);
       }
       
@@ -250,7 +246,7 @@ export const BusProvider = ({ children }: { children: ReactNode }) => {
       // Actualizar estado local
       setCurrentBus(prev => prev ? {
         ...prev,
-        BusServicios: (prev.BusServicios || []).filter(bs => bs.id_servicio !== idServicio)
+        BusServicios: (prev.servicios || []).filter(bs => bs.id_servicio !== idServicio)
       } : null);
       
       setError(null);
