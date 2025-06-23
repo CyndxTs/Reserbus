@@ -752,174 +752,189 @@
   display: inline-block;
 }
 
-/* Responsive Design */
-@media (max-width: 1024px) {
-  .sidebar {
-    width: 240px;
-  }
-  
-  .sidebar.collapsed {
-    width: 70px;
-  }
-  
-  .main-content {
-    margin-left: 240px;
-    width: calc(100% - 240px);
-    padding: 2rem 1.5rem;
-  }
-  
-  .main-content.sidebar-collapsed {
-    margin-left: 70px;
-    width: calc(100% - 70px);
-    padding: 2rem 2.5rem;
-  }
-  
-  .dashboard {
-    max-width: 1200px;
-  }
-  
-  .main-content.sidebar-collapsed .dashboard {
-    max-width: 1400px;
-  }
-  
-  .dashboard-content {
-    grid-template-columns: 1fr;
-  }
-  
-  .stats-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-  
-  .data-table .table-header,
-  .data-table .table-row {
-    grid-template-columns: 1fr 1fr 1fr 80px 100px;
-  }
-  
-  .data-table .table-header span:nth-child(4),
-  .data-table .table-row span:nth-child(4) {
-    display: none;
-  }
-  
-  .grid-filters {
+/* Gestión de Reservas - Estilos específicos */
+
+/* Código de reserva con estilo distintivo */
+.reservation-code {
+  font-family: 'Courier New', monospace;
+  font-weight: bold;
+  color: #1f2937;
+  padding: 6px 12px;
+  border-radius: 6px;
+  display: inline-block;
+  font-size: 0.85rem;
+  letter-spacing: 0.5px;
+}
+
+/* Estados específicos para reservas */
+.status.confirmada {
+  background-color: #048b65;
+  color: #ffffff;
+  padding: 4px 12px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  text-align: center;
+  display: inline-block;
+}
+
+.status.pendiente {
+  background-color: #b04707;
+  color: #ffffff;
+  padding: 4px 12px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  text-align: center;
+  display: inline-block;
+}
+
+.status.cancelada {
+  background-color: #d10c0c;
+  color: #ffffff;
+  padding: 4px 12px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  text-align: center;
+  display: inline-block;
+}
+
+.status.completada {
+  background-color: #1c10bd;
+  color: #ffffff;
+  padding: 4px 12px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  text-align: center;
+  display: inline-block;
+}
+
+/* Información del pasajero mejorada */
+.passenger-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.passenger-name {
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.passenger-doc {
+  font-size: 0.8rem;
+  color: #6b7280;
+  font-family: 'Courier New', monospace;
+}
+
+/* Información de ruta en reservas */
+.route-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.route-path {
+  font-weight: 500;
+  color: #1f2937;
+}
+
+.route-details {
+  font-size: 0.8rem;
+  color: #6b7280;
+}
+
+/* Fecha y hora mejorada */
+.datetime-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.date-part {
+  font-weight: 500;
+  color: #1f2937;
+}
+
+.time-part {
+  font-size: 0.8rem;
+  color: #6b7280;
+  font-weight: 600;
+}
+
+/* Filtros específicos para reservas */
+.reservation-filters {
+  display: flex;
+  gap: 1rem;
+  padding: 1.5rem;
+  border-bottom: 1px solid #e5e7eb;
+  background: #f8fafc;
+  flex-wrap: wrap;
+}
+
+.reservation-filters .search-input {
+  flex: 2;
+  min-width: 300px;
+}
+
+.reservation-filters .filter-select,
+.reservation-filters .date-filter {
+  min-width: 160px;
+}
+
+/* Modal de reserva - secciones */
+.form-section-title {
+  margin-bottom: 1rem;
+  color: #1f2937;
+  font-size: 1.1rem;
+  font-weight: 600;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+/* Responsive para gestión de reservas */
+@media (max-width: 768px) {
+  .reservation-filters {
     flex-direction: column;
     gap: 0.75rem;
   }
   
-  .search-input {
+  .reservation-filters .search-input {
     min-width: auto;
   }
-}
-
-@media (max-width: 768px) {
-  .sidebar {
-    width: 70px;
-  }
   
-  .sidebar.collapsed {
-    width: 70px;
-  }
-  
-  .sidebar:not(.collapsed) {
-    width: 280px;
-    transform: translateX(-210px);
-  }
-  
-  .sidebar:not(.collapsed):hover {
-    transform: translateX(0);
-  }
-  
-  .main-content {
-    margin-left: 70px;
-    width: calc(100% - 70px);
-  }
-  
-  .main-content.sidebar-collapsed {
-    margin-left: 70px;
-    width: calc(100% - 70px);
-  }
-  
-  .header {
-    padding: 0 1rem;
-  }
-  
-  .brand-name {
-    font-size: 1.5rem;
-  }
-  
-  .brand-subtitle {
-    display: none;
-  }
-  
-  .dashboard-header h1 {
-    font-size: 1.8rem;
-  }
-  
-  .stats-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 1rem;
-  }
-  
-  .dashboard-content {
-    grid-template-columns: 1fr;
-  }
-  
-  .section-header {
-    flex-direction: column;
+  .passenger-info,
+  .route-info,
+  .datetime-info {
     align-items: flex-start;
-    gap: 1rem;
   }
   
-  .section-header h1 {
-    font-size: 2rem;
-  }
-  
-  .data-table .table-header,
-  .data-table .table-row {
-    grid-template-columns: 1fr 80px 100px;
-  }
-  
-  .data-table .table-header span:nth-child(2),
-  .data-table .table-header span:nth-child(3),
-  .data-table .table-row span:nth-child(2),
-  .data-table .table-row span:nth-child(3) {
-    display: none;
-  }
-  
-  .actions {
-    flex-direction: column;
-    gap: 0.25rem;
-  }
-  
-  .action-edit,
-  .action-view {
-    font-size: 0.7rem;
+  .reservation-code {
+    font-size: 0.75rem;
     padding: 4px 8px;
   }
 }
 
 @media (max-width: 480px) {
-  .stats-grid {
-    grid-template-columns: 1fr;
+  .data-table .table-header,
+  .data-table .table-row {
+    grid-template-columns: 1fr 80px;
   }
   
-  .main-content {
-    padding: 1rem;
+  .data-table .table-header span:nth-child(3),
+  .data-table .table-header span:nth-child(4),
+  .data-table .table-header span:nth-child(5),
+  .data-table .table-row span:nth-child(3),
+  .data-table .table-row span:nth-child(4),
+  .data-table .table-row span:nth-child(5) {
+    display: none;
   }
   
-  .dashboard-header h1 {
-    font-size: 1.5rem;
-  }
-  
-  .section-header h1 {
-    font-size: 1.5rem;
-  }
-  
-  .stat-card {
-    padding: 1rem;
-  }
-  
-  .action-buttons {
-    flex-direction: column;
+  .reservation-code {
+    font-size: 0.7rem;
+    padding: 3px 6px;
   }
 }
 
@@ -1066,6 +1081,42 @@
   resize: vertical;
   min-height: 100px;
   font-family: inherit;
+}
+
+/* Estilos para mensajes de error de Formik */
+.field-error {
+  color: #ef4444;
+  font-size: 0.875rem;
+  margin-top: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background-color: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  border-left: 4px solid #ef4444;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.field-error::before {
+  content: "⚠";
+  color: #ef4444;
+  font-weight: bold;
+}
+
+/* Estado de error para inputs */
+.form-group input.error,
+.form-group select.error,
+.form-group textarea.error {
+  border-color: #ef4444;
+  background-color: #fef2f2;
+}
+
+.form-group input.error:focus,
+.form-group select.error:focus,
+.form-group textarea.error:focus {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.1);
 }
 
 .checkbox-group {

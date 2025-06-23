@@ -3,6 +3,7 @@ import './EmpresaHome.css';
 import { useClient } from '../context/ClientContext';
 import { useNavigate } from 'react-router-dom';
 import { formattedClientName } from '../util/ClientUtil';
+import { Formik, Form, Field, ErrorMessage } from 'formik';
 
 function EmpresaHome() {
   const { client, clientType, logout } = useClient();
@@ -127,12 +128,18 @@ function EmpresaHome() {
                       <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
                     </svg>
                     Registrar Bus
-                  </button>
-                  <button className="action-btn" onClick={() => openModal('ruta')}>
+                  </button>                  <button className="action-btn" onClick={() => openModal('ruta')}>
                     <svg viewBox="0 0 24 24" fill="currentColor">
                       <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
                     </svg>
                     Nueva Ruta
+                  </button>
+                  <button className="action-btn" onClick={() => openModal('reserva')}>
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M9 11H7v9c0 .55.45 1 1 1h2c.55 0 1-.45 1-1v-9H9zM13 11h-2v9c0 .55.45 1 1 1h2c.55 0 1-.45 1-1v-9h-2zM17 11h-2v9c0 .55.45 1 1 1h2c.55 0 1-.45 1-1v-9h-2z"/>
+                      <path d="M21 5V4c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v1H1v2h1v.5c0 .28.22.5.5.5s.5-.22.5-.5V7h18v.5c0 .28.22.5.5.5s.5-.22.5-.5V7h1V5h-2z"/>
+                    </svg>
+                    Nueva Reserva
                   </button>
                 </div>
               </div>
@@ -467,7 +474,173 @@ function EmpresaHome() {
                   <span>Trujillo</span>
                   <span>Panamericana Norte Km 559</span>
                   <span>1 ruta</span>
-                  <span className="status maintenance">Mantenimiento</span>
+                  <span className="status maintenance">Mantenimiento</span>                  
+                  <div className="actions">
+                    <button className="action-edit">Editar</button>
+                    <button className="action-view">Ver</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+
+        case 'reservas':
+        return (
+          <div className="section-content">
+            <div className="section-header">
+              <h1>Gestión de Reservas</h1>
+              <button className="primary-button" onClick={() => openModal('reserva')}>
+                <svg viewBox="0 0 25 15" fill="currentColor">
+                  <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+                </svg>
+                Nueva Reserva
+              </button>
+            </div>
+              <div className="data-grid">
+              <div className="reservation-filters">
+                <input type="text" placeholder="Buscar por código de reserva, pasajero..." className="search-input" />
+                <select className="filter-select">
+                  <option>Todos los estados</option>
+                  <option>Confirmada</option>
+                  <option>Pendiente</option>
+                  <option>Cancelada</option>
+                  <option>Completada</option>
+                </select>
+                <input type="date" className="date-filter" placeholder="Fecha" />
+                <select className="filter-select">
+                  <option>Todas las rutas</option>
+                  <option>Lima → Arequipa</option>
+                  <option>Arequipa → Cusco</option>
+                  <option>Lima → Trujillo</option>
+                  <option>Cusco → Lima</option>
+                </select>
+              </div>
+              
+              <div className="data-table">
+                <div className="table-header">
+                  <span>DNI</span>
+                  <span>Pasajero</span>
+                  <span>Ruta</span>
+                  <span>Fecha/Hora</span>
+                  <span>Estado</span>
+                  <span>Acciones</span>
+                </div>
+                
+                <div className="table-row">
+                  <span className="reservation-code">12345678</span>
+                  <div className="passenger-info">
+                    <span className="passenger-name">María González López</span>
+                  </div>
+                  <div className="route-info">
+                    <span className="route-path">Lima → Arequipa</span>
+                    <span className="route-details">Bus ABC-123 - Asiento 15A</span>
+                  </div>
+                  <div className="datetime-info">
+                    <span className="date-part">20 Jun 2025</span>
+                    <span className="time-part">22:30</span>
+                  </div>
+                  <span className="status confirmada">Confirmada</span>
+                  <div className="actions">
+                    <button className="action-edit">Editar</button>
+                    <button className="action-view">Ver</button>
+                  </div>
+                </div>
+                
+                <div className="table-row">
+                  <span className="reservation-code">87654321</span>
+                  <div className="passenger-info">
+                    <span className="passenger-name">Carlos Mendoza Ruiz</span>
+                  </div>
+                  <div className="route-info">
+                    <span className="route-path">Arequipa → Cusco</span>
+                    <span className="route-details">Bus XYZ-456 - Asiento 8B</span>
+                  </div>
+                  <div className="datetime-info">
+                    <span className="date-part">21 Jun 2025</span>
+                    <span className="time-part">08:00</span>
+                  </div>
+                  <span className="status pendiente">Pendiente</span>
+                  <div className="actions">
+                    <button className="action-edit">Editar</button>
+                    <button className="action-view">Ver</button>
+                  </div>
+                </div>
+                
+                <div className="table-row">
+                  <span className="reservation-code">11223344</span>
+                  <div className="passenger-info">
+                    <span className="passenger-name">Ana Patricia Vega</span>
+                  </div>
+                  <div className="route-info">
+                    <span className="route-path">Lima → Trujillo</span>
+                    <span className="route-details">Bus DEF-789 - Asiento 12C</span>
+                  </div>
+                  <div className="datetime-info">
+                    <span className="date-part">19 Jun 2025</span>
+                    <span className="time-part">15:30</span>
+                  </div>
+                  <span className="status completada">Completada</span>
+                  <div className="actions">
+                    <button className="action-edit">Editar</button>
+                    <button className="action-view">Ver</button>
+                  </div>
+                </div>
+                
+                <div className="table-row">
+                  <span className="reservation-code">55667788</span>
+                  <div className="passenger-info">
+                    <span className="passenger-name">Roberto Silva Torres</span>
+                  </div>
+                  <div className="route-info">
+                    <span className="route-path">Cusco → Lima</span>
+                    <span className="route-details">Bus GHI-012 - Asiento 20A</span>
+                  </div>
+                  <div className="datetime-info">
+                    <span className="date-part">22 Jun 2025</span>
+                    <span className="time-part">20:00</span>
+                  </div>
+                  <span className="status confirmada">Confirmada</span>
+                  <div className="actions">
+                    <button className="action-edit">Editar</button>
+                    <button className="action-view">Ver</button>
+                  </div>
+                </div>
+                
+                <div className="table-row">
+                  <span className="reservation-code">99887766</span>
+                  <div className="passenger-info">
+                    <span className="passenger-name">Lucía Morales Castro</span>
+                  </div>
+                  <div className="route-info">
+                    <span className="route-path">Arequipa → Lima</span>
+                    <span className="route-details">Bus ABC-123 - Asiento 5B</span>
+                  </div>
+                  <div className="datetime-info">
+                    <span className="date-part">18 Jun 2025</span>
+                    <span className="time-part">14:00</span>
+                  </div>
+                  <span className="status cancelada">Cancelada</span>
+                  <div className="actions">
+                    <button className="action-edit">Editar</button>
+                    <button className="action-view">Ver</button>
+                  </div>
+                </div>
+                
+                <div className="table-row">
+                  <span className="reservation-code">44556677</span>
+                  <div className="passenger-info">
+                    <span className="passenger-name">Fernando Díaz López</span>
+                  </div>
+                  <div className="route-info">
+                    <span className="route-path">Lima → Cusco</span>
+                    <span className="route-details">Bus XYZ-456 - Asiento 18C</span>
+                  </div>
+                  <div className="datetime-info">
+                    <span className="date-part">23 Jun 2025</span>
+                    <span className="time-part">21:45</span>
+                  </div>
+                  <span className="status pendiente">Pendiente</span>
                   <div className="actions">
                     <button className="action-edit">Editar</button>
                     <button className="action-view">Ver</button>
@@ -761,12 +934,238 @@ function EmpresaHome() {
                       <span>Sala de Espera</span>
                     </label>
                   </div>
-                </div>
+                </div>                
                 <div className="modal-actions">
                   <button type="button" className="btn-secondary" onClick={closeModal}>Cancelar</button>
                   <button type="submit" className="btn-primary">Registrar Terminal</button>
                 </div>
               </form>
+            </div>
+          );        case 'reserva':
+          // Valores iniciales del formulario
+          const initialValues = {
+            viaje: '',
+            nombres: '',
+            apellidos: '',
+            tipoDocumento: '',
+            numeroDocumento: '',
+            telefono: '',
+            email: '',
+            asientoPreferencia: '',
+            tipoPasajero: '',
+            metodoPago: '',
+            observaciones: ''
+          };
+
+          // Función de validación
+          const validateReserva = (values: any) => {
+            const errors: any = {};
+
+            // Validación de viaje
+            if (!values.viaje) {
+              errors.viaje = 'Debe seleccionar un viaje';
+            }
+
+            // Validación de nombres
+            if (!values.nombres) {
+              errors.nombres = 'Los nombres son obligatorios';
+            } else if (values.nombres.length < 2) {
+              errors.nombres = 'Los nombres deben tener al menos 2 caracteres';
+            }
+
+            // Validación de apellidos
+            if (!values.apellidos) {
+              errors.apellidos = 'Los apellidos son obligatorios';
+            } else if (values.apellidos.length < 2) {
+              errors.apellidos = 'Los apellidos deben tener al menos 2 caracteres';
+            }
+
+            // Validación de tipo de documento
+            if (!values.tipoDocumento) {
+              errors.tipoDocumento = 'Debe seleccionar un tipo de documento';
+            }
+
+            // Validación de número de documento
+            if (!values.numeroDocumento) {
+              errors.numeroDocumento = 'El número de documento es obligatorio';
+            } else if (values.tipoDocumento === 'dni' && !/^\d{8}$/.test(values.numeroDocumento)) {
+              errors.numeroDocumento = 'El DNI debe tener 8 dígitos';
+            } else if (values.tipoDocumento === 'ce' && values.numeroDocumento.length < 8) {
+              errors.numeroDocumento = 'El carné de extranjería debe tener al menos 8 caracteres';
+            } else if (values.tipoDocumento === 'pasaporte' && values.numeroDocumento.length < 6) {
+              errors.numeroDocumento = 'El pasaporte debe tener al menos 6 caracteres';
+            }
+
+            // Validación de teléfono
+            if (!values.telefono) {
+              errors.telefono = 'El teléfono es obligatorio';
+            } else if (!/^\d{9}$/.test(values.telefono)) {
+              errors.telefono = 'El teléfono debe tener 9 dígitos';
+            }
+
+            // Validación de email
+            if (!values.email) {
+              errors.email = 'El email es obligatorio';
+            } else if (!/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i.test(values.email)) {
+              errors.email = 'Formato de email inválido';
+            }
+
+            // Validación de tipo de pasajero
+            if (!values.tipoPasajero) {
+              errors.tipoPasajero = 'Debe seleccionar el tipo de pasajero';
+            }
+
+            // Validación de método de pago
+            if (!values.metodoPago) {
+              errors.metodoPago = 'Debe seleccionar un método de pago';
+            }
+
+            return errors;
+          };
+
+          // Función para enviar el formulario
+          const handleSubmitReserva = (values: any, { setSubmitting }: any) => {
+            console.log('Datos de la reserva:', values);
+            // Aquí iría la lógica para enviar los datos al servidor
+            setTimeout(() => {
+              alert('Reserva creada exitosamente');
+              setSubmitting(false);
+              closeModal();
+            }, 1000);
+          };
+
+          return (
+            <div className="modal-content">
+              <div className="modal-header">
+                <h2>Crear Nueva Reserva</h2>
+                <button className="modal-close" onClick={closeModal}>
+                  <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                  </svg>
+                </button>
+              </div>
+
+              <Formik
+                initialValues={initialValues}
+                validate={validateReserva}
+                onSubmit={handleSubmitReserva}
+              >
+                {({ isSubmitting, errors, touched }) => (
+                  <Form className="modal-form">
+                    <div className="form-group">
+                      <label htmlFor="viaje">Viaje Disponible</label>
+                      <Field as="select" id="viaje" name="viaje">
+                        <option value="">Seleccionar viaje</option>
+                        <option value="lima-arequipa-20jun">Lima → Arequipa - 20 Jun 2025 22:30 (S/ 80.00)</option>
+                        <option value="arequipa-cusco-21jun">Arequipa → Cusco - 21 Jun 2025 08:00 (S/ 65.00)</option>
+                        <option value="lima-trujillo-22jun">Lima → Trujillo - 22 Jun 2025 15:30 (S/ 70.00)</option>
+                        <option value="cusco-lima-23jun">Cusco → Lima - 23 Jun 2025 20:00 (S/ 85.00)</option>
+                      </Field>
+                      <ErrorMessage name="viaje" component="div" className="field-error" />
+                    </div>
+                    
+                    <h3 style={{marginBottom: '1rem', color: '#1f2937', fontSize: '1.1rem'}}>Datos del Pasajero</h3>
+                    
+                    <div className="form-row">
+                      <div className="form-group">
+                        <label htmlFor="nombres">Nombres</label>
+                        <Field type="text" id="nombres" name="nombres" placeholder="María Elena" />
+                        <ErrorMessage name="nombres" component="div" className="field-error" />
+                      </div>
+                      <div className="form-group">
+                        <label htmlFor="apellidos">Apellidos</label>
+                        <Field type="text" id="apellidos" name="apellidos" placeholder="González López" />
+                        <ErrorMessage name="apellidos" component="div" className="field-error" />
+                      </div>
+                    </div>
+                    
+                    <div className="form-row">
+                      <div className="form-group">
+                        <label htmlFor="tipoDocumento">Tipo de Documento</label>
+                        <Field as="select" id="tipoDocumento" name="tipoDocumento">
+                          <option value="">Seleccionar</option>
+                          <option value="dni">DNI</option>
+                          <option value="ce">Carné de Extranjería</option>
+                          <option value="pasaporte">Pasaporte</option>
+                        </Field>
+                        <ErrorMessage name="tipoDocumento" component="div" className="field-error" />
+                      </div>
+                      <div className="form-group">
+                        <label htmlFor="numeroDocumento">Número de Documento</label>
+                        <Field type="text" id="numeroDocumento" name="numeroDocumento" placeholder="12345678" />
+                        <ErrorMessage name="numeroDocumento" component="div" className="field-error" />
+                      </div>
+                    </div>
+                    
+                    <div className="form-row">
+                      <div className="form-group">
+                        <label htmlFor="telefono">Teléfono</label>
+                        <Field type="tel" id="telefono" name="telefono" placeholder="987654321" />
+                        <ErrorMessage name="telefono" component="div" className="field-error" />
+                      </div>
+                      <div className="form-group">
+                        <label htmlFor="email">Email</label>
+                        <Field type="email" id="email" name="email" placeholder="maria@email.com" />
+                        <ErrorMessage name="email" component="div" className="field-error" />
+                      </div>
+                    </div>
+                    
+                    <div className="form-row">
+                      <div className="form-group">
+                        <label htmlFor="asientoPreferencia">Preferencia de Asiento</label>
+                        <Field as="select" id="asientoPreferencia" name="asientoPreferencia">
+                          <option value="">Sin preferencia</option>
+                          <option value="ventana">Ventana</option>
+                          <option value="pasillo">Pasillo</option>
+                          <option value="primera-fila">Primera fila</option>
+                        </Field>
+                        <ErrorMessage name="asientoPreferencia" component="div" className="field-error" />
+                      </div>
+                      <div className="form-group">
+                        <label htmlFor="tipoPasajero">Tipo de Pasajero</label>
+                        <Field as="select" id="tipoPasajero" name="tipoPasajero">
+                          <option value="">Seleccionar</option>
+                          <option value="adulto">Adulto</option>
+                          <option value="niño">Niño (3-11 años)</option>
+                          <option value="estudiante">Estudiante</option>
+                          <option value="adulto-mayor">Adulto Mayor</option>
+                        </Field>
+                        <ErrorMessage name="tipoPasajero" component="div" className="field-error" />
+                      </div>
+                    </div>
+                    
+                    <div className="form-group">
+                      <label htmlFor="metodoPago">Método de Pago</label>
+                      <Field as="select" id="metodoPago" name="metodoPago">
+                        <option value="">Seleccionar método</option>
+                        <option value="efectivo">Efectivo en terminal</option>
+                        <option value="tarjeta">Tarjeta de crédito/débito</option>
+                        <option value="transferencia">Transferencia bancaria</option>
+                        <option value="yape">Yape/Plin</option>
+                      </Field>
+                      <ErrorMessage name="metodoPago" component="div" className="field-error" />
+                    </div>
+                    
+                    <div className="form-group">
+                      <label htmlFor="observaciones">Observaciones</label>
+                      <Field 
+                        as="textarea"
+                        id="observaciones" 
+                        name="observaciones" 
+                        placeholder="Información adicional, necesidades especiales, etc."
+                      />
+                      <ErrorMessage name="observaciones" component="div" className="field-error" />
+                    </div>
+                    
+                    <div className="modal-actions">
+                      <button type="button" className="btn-secondary" onClick={closeModal}>Cancelar</button>
+                      <button type="submit" className="btn-primary" disabled={isSubmitting}>
+                        {isSubmitting ? 'Creando...' : 'Crear Reserva'}
+                      </button>
+                    </div>
+                  </Form>
+                )}
+              </Formik>
             </div>
           );
 
@@ -861,8 +1260,7 @@ function EmpresaHome() {
               <path d="M12.5 7H11v6l5.25 3.15.75-1.23-4.5-2.67z"/>
             </svg>
             <span className="nav-text">Viajes</span>
-          </button>
-          <button 
+          </button>          <button 
             className={activeSection === 'terminales' ? 'nav-item active' : 'nav-item'}
             onClick={() => setActiveSection('terminales')}
             title="Terminales"
@@ -871,6 +1269,17 @@ function EmpresaHome() {
               <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
             </svg>
             <span className="nav-text">Terminales</span>
+          </button>
+          <button 
+            className={activeSection === 'reservas' ? 'nav-item active' : 'nav-item'}
+            onClick={() => setActiveSection('reservas')}
+            title="Gestión de Reservas"
+          >
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <path d="M9 11H7v9c0 .55.45 1 1 1h2c.55 0 1-.45 1-1v-9H9zM13 11h-2v9c0 .55.45 1 1 1h2c.55 0 1-.45 1-1v-9h-2zM17 11h-2v9c0 .55.45 1 1 1h2c.55 0 1-.45 1-1v-9h-2z"/>
+              <path d="M21 5V4c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v1H1v2h1v.5c0 .28.22.5.5.5s.5-.22.5-.5V7h18v.5c0 .28.22.5.5.5s.5-.22.5-.5V7h1V5h-2z"/>
+            </svg>
+            <span className="nav-text">Reservas</span>
           </button>
         </nav>
       </aside>      <main className={`main-content ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
