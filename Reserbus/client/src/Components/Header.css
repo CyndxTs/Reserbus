@@ -59,16 +59,25 @@
   color: #4d15f0;
 }
 
+.open-modal-signin {
+  display: flex;
+  direction: row;
+  gap: 12px;
+  align-items: center;
+  height: 100%;
+  padding: 0 24px;
+}
+
+.open-modal-signin img {
+  width: 32px;
+  height: 32px;
+  color: #4d15f0;
+}
+
+
 .client-menu-wrapper {
   position: relative;
   display: inline-block;
-  height: 100%;
-}
-
-.open-modal-signin {
-  display: flex;
-  align-items: center;
-  gap: 8px;
   height: 100%;
 }
 
@@ -77,25 +86,41 @@
   height: 24px;
 }
 
+.client-menu-wrapper:hover .client-menu-ddl {
+  display: flex;
+}
+
 .client-menu-ddl {
   position: absolute;
-  right: 0;
   top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
   background-color: white;
-  border: 1px solid #e0e0e0;
-  border-radius: 4px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  min-width: 150px;
-  z-index: 10;
+  overflow: hidden;
+  display: none; /* puedes cambiarlo a 'flex' según el estado */
+  flex-direction: column;
+  min-width: 150px; /* si prefieres 100% cámbialo */
+  z-index: 100;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.08); /* más suave y moderno */
+  border: 2px solid rgba(0, 0, 0, 0.1);
+  border-top: none;
+  border-radius: 12px;
 }
 
 .client-menu-ddl button {
-  width: 100%;
-  text-align: left;
-  padding: 12px 16px;
-  font-size: 1rem;
+  all: unset;
   display: block;
+  width: 100%;
+  padding: 12px 18px; /* o ajusta si prefieres 16px */
+  font-size: 1rem;
+  font-weight: 500;
+  color: #333;
+  text-align: left;
+  cursor: pointer;
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
 }
+
+
 
 .client-menu-ddl button:hover {
   background-color: #f5f5f5;
