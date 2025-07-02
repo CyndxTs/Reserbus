@@ -15,6 +15,25 @@ router.post('/', async (req, res) => {
     await Empresa.create(empresa);
     res.json(empresa);
 });
+// SIGNUP
+router.post('/signup', async (req, res) => {
+  const { correo_electronico, contrasenia, nombres, apellidos } = req.body;
+  try {
+    const existente = await Empresa.findOne({ where: { correo_electronico } });
+    if (existente) return res.status(409).json({ error: 'Valor ya registrado.' });
+    const hashedPassword = await bcrypt.hash(contrasenia, 10);
+    const nuevaEmpresa = await Empresa.create({
+      correo_electronico,
+      contrasenia: hashedPassword,
+      nombres,
+      apellidos
+    });
+    const { contrasenia: _, ...EmpresaSinPassword } = nuevaEmpresa.toJSON();
+    res.status(201).json({ empresa: EmpresaSinPassword });
+  } catch (error) {
+    res.status(500).json({ error: `Error interno en el servidor.\n${err.message}` });
+  }
+});
 // SIGNIN
 router.post('/signin', async (req, res) => {
   const { correo_electronico, contrasenia } = req.body;

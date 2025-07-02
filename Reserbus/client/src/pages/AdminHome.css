@@ -91,7 +91,13 @@
 .main-content {
   margin-left: 100px;
   padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin-top: 60px;
 }
+
 
 h1 {
   font-size: 1.75rem;
@@ -115,4 +121,23 @@ h1 {
 
 .primary-button:hover {
   background-color: #3b0fd6;
+}
+
+.main-title {
+  font-size: 2rem;
+  font-weight: 600;
+  margin-bottom: 2.5rem;
+}
+
+.button-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.main-title.left {
+  text-align: left;
+  align-self: flex-start;
+  margin-left: 0;
 }

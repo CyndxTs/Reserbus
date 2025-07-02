@@ -4,6 +4,9 @@ import { ClientProvider } from './context/ClientContext'; // importa tu Provider
 import Home from './pages/Home';
 import EmpresaHome from './pages/EmpresaHome';
 import AdminHome from './pages/AdminHome';
+import AdminAddUser from './pages/AdminAddUser';
+import AdminEditUser from './pages/AdminEditUser';
+import AdminDeleteUser from './pages/AdminDeleteUser';
 
 function App() {
   return (
@@ -14,6 +17,9 @@ function App() {
             <Route path="/" element={<Home />} />
             <Route path="/empresa" element={<EmpresaHome />} />
             <Route path="/admin" element={<AdminHome />} />
+            <Route path="/admin/add-user" element={<AdminAddUser />} />
+            <Route path="/admin/edit-user" element={<AdminEditUser />} />
+            <Route path="/admin/delete-user" element={<AdminDeleteUser />} />
           </Routes>
         </Router>
       </ClientProvider>
@@ -22,3 +28,4 @@ function App() {
 }
 
 export default App;
+
