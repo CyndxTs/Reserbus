@@ -28,4 +28,12 @@ function App() {
   );
 }
 
+function EmpresaRoutes() {
+  return (
+    <Routes>
+      <Route index element={<EmpresaHome />} />
+    </Routes>
+  );
+}
+
 export default App;
