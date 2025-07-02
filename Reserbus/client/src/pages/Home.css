@@ -127,11 +127,18 @@
 }
 
 .search {
-  margin-top: 20px;
   display: flex;
-  justify-content: center;
-  gap: 12px;
-  flex-wrap: wrap;
+  align-items: center;
+  background: #fff;
+  border-radius: 999px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+  padding: 1.2rem 2rem;
+  gap: 1.5rem;
+  flex-wrap: wrap; 
+  width: 100%;
+  max-width: 1250px;
+  margin: 0 auto;
+  
 }
 
 .search select,
@@ -375,4 +382,28 @@
 .form-side .submit-button:disabled {
   background-color: #bda8f9;
   cursor: not-allowed;
+}
+
+.search .field-error{
+  color: red;
+  font-size: 12px;
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 20px; 
+  margin-top: 4px;
+}
+
+.search-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  position: relative;
+  min-height: 90px; 
+}
+.search-label {
+  margin-bottom: 5px;
+  font-weight: 500;
+  color: #333;
+  font-size: 14px;
 }
