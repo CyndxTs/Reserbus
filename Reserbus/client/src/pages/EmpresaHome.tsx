@@ -1,9 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState,useEffect } from 'react';
 import './EmpresaHome.css';
-import { useClient } from '../context/ClientContext';
+import { useClient,Empresa } from '../context/ClientContext';
 import { useNavigate } from 'react-router-dom';
 import { formattedClientName } from '../util/ClientUtil';
 import { Formik, Form, Field, ErrorMessage } from 'formik';
+import { Bus, useBus } from '../context/BusContext';
+import ConfirmModal from '../components/ConfirmModal';
+import CreateBusModal from '../components/CreateBusModal';
 
 function EmpresaHome() {
   const { client, clientType, logout } = useClient();
@@ -11,8 +14,16 @@ function EmpresaHome() {
   const [activeSection, setActiveSection] = useState('dashboard');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
   const [modalOpen, setModalOpen] = useState<string | null>(null);
+  const empresa = clientType === 'EMPRESA' ? client as Empresa : null;
+  const [showBusModal, setShowBusModal] = useState(false);
+  const [showSuccessPopup, setShowSuccessPopup] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const { buses, fetchBuses } = useBus();
+  const [selectedBus, setSelectedBus] = useState<Bus | null>(null);
+  const { deleteBus } = useBus();
+  const [busAEliminar, setBusAEliminar] = useState<Bus | null>(null);
 
-  const empresa = clientType === 'EMPRESA' ? client : null;
   const handleSignOut = () => {
     logout();
     navigate('/');
@@ -25,6 +36,60 @@ function EmpresaHome() {
   const closeModal = () => {
     setModalOpen(null);
   };
+
+  // Cargar buses al montar el componente
+  useEffect(() => {
+    console.log("Empresa cargada", empresa)
+    if (empresa) {
+      fetchBuses(empresa.id_empresa);
+      console.log("Buses cargados:", buses);
+    }
+  }, [empresa]);
+
+
+  // Ocultar popup después de 3 segundos
+  useEffect(() => {
+    if (showSuccessPopup) {
+      const timer = setTimeout(() => setShowSuccessPopup(false), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [showSuccessPopup]);
+  const handleSuccess = (action: 'create' | 'update' | 'delete') => {
+    let message = "";
+    switch(action) {
+      case 'create':
+        message = "Bus creado correctamente ✅";
+        break;
+      case 'update':
+        message = "Bus actualizado correctamente ✅";
+        break;
+      case 'delete':
+        message = "Bus eliminado correctamente ✅";
+        break;
+    }
+    setSuccessMessage(message);
+    setShowSuccessPopup(true);
+  };
+  const handleEliminarBus = async (id: number) => {
+    if (!window.confirm("¿Estás seguro de eliminar este bus?")) return;
+
+    try {
+      await deleteBus(id);
+      if(empresa) {
+        fetchBuses(empresa.id_empresa); // refrescar la lista
+      }
+    } catch (error) {
+      alert("Error al eliminar el bus.");
+    }
+  };
+
+  // Filtrar información de buses (para el buscador)
+  const filteredBuses = buses.filter(bus => 
+    bus.placa.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    bus.marca.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    bus.modelo.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
 
   const renderMainContent = () => {
     switch (activeSection) {

@@ -8,7 +8,7 @@ import * as Yup from 'yup';
 import axios from 'axios';
 import { AxiosError } from 'axios';
 import './Home.css';
-import Header from '../Components/Header';
+import Header from '../components/Header';
 
 function Home() {
   const navigate = useNavigate();

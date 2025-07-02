@@ -4,7 +4,7 @@ import { useClient } from '../context/ClientContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { addDays,format } from 'date-fns';
 import es from 'date-fns/locale/es';
-import Header from '../Components/Header';
+import Header from '../components/Header';
 import { Tarifa, Empresa, Ruta, Viaje, SearchParams, LocationState } from '../util/BuscarViajeUtil';
 
 function SearchResults() {
