@@ -5,8 +5,8 @@ import { useNavigate } from 'react-router-dom';
 import { formattedClientName } from '../util/ClientUtil';
 import { Formik, Form, Field, ErrorMessage } from 'formik';
 import { Bus, useBus } from '../context/BusContext';
-import ConfirmModal from '../components/ConfirmModal';
-import CreateBusModal from '../components/CreateBusModal';
+import ConfirmModal from '../componentss/ConfirmModal';
+import CreateBusModal from '../componentss/CreateBusModal';
 
 function EmpresaHome() {
   const { client, clientType, logout } = useClient();

@@ -4,7 +4,8 @@ import { useClient } from '../context/ClientContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { addDays,format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import Header from '../components/Header';
+import Header from '../componentss/Header';
+import setShowSignInModal from '../pages/Home';
 import { Tarifa, Empresa, Ruta, Viaje, SearchParams, LocationState } from '../util/BuscarViajeUtil';
 
 function SearchResults() {
@@ -108,8 +109,12 @@ function SearchResults() {
 
   return (
     <div className="search-results">
-      <Header />
-      
+      <Header
+        navOptions={[
+          { label: 'Contacto', path: '/contacto' },
+          { label: 'Acerca de nosotros', path: '/acerca-de' }
+        ]}
+      />
       {/* Barra de pasos */}
       <div className="steps-bar">
       <div className="step active"><span className="step-circle">1</span><br /><span>Destino y fecha</span></div>

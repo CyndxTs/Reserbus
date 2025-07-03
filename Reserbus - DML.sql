@@ -202,7 +202,6 @@ INSERT INTO RUTA (distancia_de_recorrido, id_terminal_origen, id_terminal_destin
 (836.36, 13, 1, 19),
 (213.6, 2, 12, 9);
 
-
 INSERT INTO VIAJE (estado, instante_abordaje, instante_partida, instante_llegada, id_ruta, id_bus, id_empresa) VALUES
 ('FINALIZADO','2025-03-21 03:27:35','2025-03-21 04:27:35','2025-03-21 12:27:35',10,6,9),
 ('RETRASADO','2025-02-06 18:07:35',NULL,NULL,10,17,10),
