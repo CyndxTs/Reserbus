@@ -1,22 +1,22 @@
 import React, { useEffect, useState } from 'react';
 import './SearchResults.css'; 
 import { useClient } from '../context/ClientContext';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { addDays,format } from 'date-fns';
-import es from 'date-fns/locale/es';
-import Header from '../components/Header';
-import { Tarifa, Empresa, Ruta, Viaje, SearchParams, LocationState } from '../util/BuscarViajeUtil';
+import {es} from 'date-fns/locale';
+import Header from '../probando/Header';
+import { Tarifa, Empresa, Ruta, Viaje, SearchParams } from '../util/BuscarViajeUtil';
+import axios from 'axios';
 
 function SearchResults() {
   const { client, clientType } = useClient();
   const viajero = clientType === 'VIAJERO' ? client : null;
   const navigate = useNavigate();
-  const location = useLocation();
   const [viajes, setViajes] = useState<Viaje[]>([]);
   const [parametros, setParametros] = useState<SearchParams | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+  const [searchParams] = useSearchParams();
 
 
   
@@ -44,19 +44,45 @@ function SearchResults() {
       </div>
     );
   };
-
   useEffect(() => {
-    const state = location.state as LocationState;
-    if (state && state.viajes && state.parametros) {
-      setViajes(state.viajes);
-      setParametros(state.parametros);
-      setLoading(false);
-    } else {
-      setError('No se encontraron resultados de búsqueda');
-      setLoading(false);
-    }
-  }, [location]);
+  const origen = searchParams.get('origen');
+  const destino = searchParams.get('destino');
+  const salida = searchParams.get('salida');
+  const regreso = searchParams.get('regreso');
+  const pasajerosRaw = searchParams.get('pasajeros');
 
+  const pasajeros = pasajerosRaw ? Number(pasajerosRaw) : null;
+
+  if (origen && destino && salida && pasajeros !== null && !isNaN(pasajeros)) {
+    axios.get('/api/viajes/buscar', {
+      params: {
+        origen,
+        destino,
+        fecha_salida: salida,
+        fecha_regreso: regreso || null,
+        pasajeros
+      }
+    })
+    .then(res => {
+      setViajes(res.data.viajes);
+      setParametros({
+        origen,
+        destino,
+        fecha_salida: salida,
+        fecha_regreso: regreso || null,
+        pasajeros
+      });
+      setLoading(false);
+    })
+    .catch(() => {
+      setError('Error al obtener resultados');
+      setLoading(false);
+    });
+  } else {
+    setError('Faltan parámetros en la búsqueda');
+    setLoading(false);
+  }
+  }, [searchParams]);
   // Formatea la hora de inicio (24h)
   const getHoraInicio = (instante_abordaje: string) => {
     if (!instante_abordaje) return "--:--";
@@ -105,6 +131,10 @@ function SearchResults() {
   if (error) {
     return <div className="error-message">{error}</div>;
   }
+
+  const handleSelectTrip = (viaje: any) => {
+    navigate(`/resultados/${viaje.id_viaje}`);
+  };
 
   return (
     <div className="search-results">
@@ -193,7 +223,7 @@ function SearchResults() {
           <div className="card-precio">
             <div className="desde">Desde:</div>
             <div className="precio">{getPrecioMinimo(viaje.tarifas)}</div>
-            <button className="btn-asientos">Ver asientos</button>
+            <button className="btn-asientos" onClick={() =>handleSelectTrip(viaje) }>Ver asientos</button>
             <div className="disponibles">{viaje.tarifas.length > 0 ? '20 disponibles' : 'No disponibles'}</div>
           </div>
         </div>

@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { Viaje, Ruta, Terminal, Empresa, Tarifa } = require('../models');
+const { Viaje, Ruta, Terminal, Empresa, Tarifa, Bus, Servicio, TipoDeAsiento, Piso, Asiento } = require('../models');
 const { Op, Sequelize } = require('sequelize');
 // TEST - SELECT ALL
 router.get('/', async (req, res) => {
@@ -53,15 +53,6 @@ router.get('/buscar', async (req, res) => {
             ]
         });
 
-        viajes.forEach(viaje => {
-            console.log(
-                'Viaje:', viaje.id_viaje,
-                'Ruta:', viaje.Ruta?.id_ruta,
-                'Origen:', viaje.Ruta?.terminalOrigen?.nombre,
-                'Destino:', viaje.Ruta?.terminalDestino?.nombre
-            );
-        });
-
         // Formatear resultados 
         const viajesFormateados = viajes.map(viaje => ({
             id_viaje: viaje.id_viaje,
@@ -104,6 +95,90 @@ router.get('/buscar', async (req, res) => {
             mensaje: error.message 
         });
     }
+});
+
+router.get('/resultados/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const viaje = await Viaje.findOne({
+      where: { id_viaje: id },
+      include: [
+        {
+          model: Ruta,
+          include: [
+            { model: Terminal, as: 'terminalOrigen' },
+            { model: Terminal, as: 'terminalDestino' }
+          ]
+        },
+        {
+          model: Bus,
+          include: [
+            {
+              model: Servicio,
+              through: { attributes: [] } 
+            },
+            {
+                model: Piso,
+                include: [
+                    {
+                    model: Asiento,
+                    include: [{ model: TipoDeAsiento }],
+                    where: { esta_habilitado: true },
+                    required: false
+                    }
+                ]
+            }
+          ]
+        },
+        { model: Empresa },
+        {
+          model: Tarifa,
+          include: [{ model: TipoDeAsiento }]
+        }
+      ]
+    });
+
+    if (!viaje) return res.status(404).json({ error: 'Viaje no encontrado' });
+
+    const pisos = (viaje.Bus?.Pisos || []).map(piso => ({
+    numero_de_piso: piso.numero_de_piso,
+    nombre: piso.nombre,
+    asientos: (piso.Asientos || []).map(asiento => ({
+    id_asiento: asiento.id_asiento,
+    ubicacion: asiento.ubicacion,
+    estado: asiento.estado,
+    tipo: asiento.TipoDeAsiento?.nombre || 'Desconocido'
+    }))
+    }));
+
+    const viajeFormateado = {
+      id_viaje: viaje.id_viaje,
+      estado: viaje.estado,
+      abordaje: viaje.instante_abordaje,
+      partida: viaje.instante_partida,
+      llegada: viaje.instante_llegada,
+      duracion: viaje.duracion_estimada_minutos,
+      origen: viaje.Ruta?.terminalOrigen?.nombre || 'Desconocido',
+      destino: viaje.Ruta?.terminalDestino?.nombre || 'Desconocido',
+      empresa: viaje.Empresa?.razon_social || 'Empresa desconocida',
+      placa_bus: viaje.Bus?.placa,
+      cantidad_pisos: viaje.Bus?.Pisos?.length ?? 1, 
+      servicios: viaje.Bus?.Servicios?.map(s => s.nombre) || [],
+      tarifas: viaje.Tarifas?.map(t => ({
+        id_tarifa: t.id_tarifa,
+        tipo: t.TipoDeAsiento?.nombre,
+        precio: t.precio,
+        detalle: t.detalle
+      })) || [],
+      pisos 
+    };
+
+    return res.json(viajeFormateado);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: e.message });
+  }
 });
 
 module.exports = router;

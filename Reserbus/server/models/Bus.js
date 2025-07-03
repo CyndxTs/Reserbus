@@ -17,11 +17,6 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING(60),
       allowNull: false
     },
-    cantidad_pisos: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-      defaultValue: 1
-    },
     id_empresa: {
       type: DataTypes.INTEGER,
       allowNull: false

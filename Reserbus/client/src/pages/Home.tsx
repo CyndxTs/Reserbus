@@ -8,7 +8,7 @@ import * as Yup from 'yup';
 import axios from 'axios';
 import { AxiosError } from 'axios';
 import './Home.css';
-import Header from '../components/Header';
+import Header from '../probando/Header';
 
 function Home() {
   const navigate = useNavigate();
@@ -126,22 +126,13 @@ function Home() {
   const handleSearch = async (values: SearchValues, { setSubmitting, setFieldError }:FormikHelpers<SearchValues>) => {
     console.log("Formulario enviado con valores:", values);
     try {
-      const searchParams = {
-        origen: values.origen,
-        destino: values.destino,
-        fecha_salida: values.salida,
-        fecha_regreso: values.regreso || null,
-        pasajeros: values.pasajeros
-      };
-      const response = await axios.get('/api/viajes/buscar', { 
-        params: searchParams 
+      const query = new URLSearchParams({
+      origen: values.origen,
+      destino: values.destino,
+      salida: values.salida,
+      pasajeros: values.pasajeros.toString()
       });
-      navigate('/resultados', { 
-        state: { 
-          viajes: response.data.viajes,
-          parametros: searchParams
-        } 
-      });
+      navigate(`/resultados?${query.toString()}`);
     } catch (e) {
       console.error('Error en la búsqueda:', e);
     } finally {

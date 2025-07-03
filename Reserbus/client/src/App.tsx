@@ -6,7 +6,7 @@ import Home from './pages/Home';
 import EmpresaHome from './pages/EmpresaHome';
 import AdminHome from './pages/AdminHome';
 import SearchResults from './pages/SearchResults';
-
+import DetallesViaje from './pages/DetallesViaje';
 function App() {
   return (
     <div className="App">
@@ -21,6 +21,7 @@ function App() {
             } />
             <Route path="/admin" element={<AdminHome />} />
             <Route path="/resultados" element={<SearchResults />} />
+            <Route path="/resultados/:id" element={<DetallesViaje />} /> 
           </Routes>
         </Router>
       </ClientProvider>

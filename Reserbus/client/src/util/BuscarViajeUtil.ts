@@ -42,8 +42,3 @@ export interface SearchParams {
   fecha_regreso: string | null;
   pasajeros: number;
 }
-
-export interface LocationState {
-  viajes: Viaje[];
-  parametros: SearchParams;
-}
