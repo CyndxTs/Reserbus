@@ -59,7 +59,8 @@ module.exports = (sequelize, DataTypes) => {
       as: 'servicios',
       foreignKey: 'id_bus',
       otherKey: 'id_servicio',
-      onDelete: 'CASCADE'
+      onDelete: 'CASCADE',
+      as: 'servicios'
     });
   };
 

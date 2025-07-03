@@ -49,6 +49,7 @@ CREATE TABLE IF NOT EXISTS `BUS` (
   `placa` VARCHAR(10) NOT NULL,
   `marca` VARCHAR(60) NOT NULL,
   `modelo` VARCHAR(60) NOT NULL,
+  `cantidad_pisos` INT NOT NULL,
   `id_empresa` INT NOT NULL,
   `esta_habilitado` TINYINT NOT NULL DEFAULT 1,
   PRIMARY KEY (`id_bus`),

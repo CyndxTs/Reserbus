@@ -12,6 +12,7 @@ function App() {
     <div className="App">
       <ClientProvider>
         <Router>
+      
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/empresa/*" element={
@@ -20,10 +21,13 @@ function App() {
               </BusProvider>
             } />
             <Route path="/admin" element={<AdminHome />} />
-            <Route path="/resultados" element={<SearchResults />} />
+            <Route path="/resultados" element={<SearchResults />} /
+
           </Routes>
         </Router>
+        
       </ClientProvider>
+
     </div>
   );
 }

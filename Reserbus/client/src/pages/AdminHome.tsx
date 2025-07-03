@@ -1,4 +1,6 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
+
 import './AdminHome.css';
 import { useClient } from '../context/ClientContext';
 import { useNavigate } from 'react-router-dom';
@@ -6,7 +8,6 @@ import { useNavigate } from 'react-router-dom';
 function AdminHome() {
   const { client, clientType } = useClient();
   const navigate = useNavigate();
-
   const admin = clientType === 'ADMINISTRADOR' ? client : null;
 
   return (

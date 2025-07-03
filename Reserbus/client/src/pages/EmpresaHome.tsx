@@ -1250,7 +1250,14 @@ function EmpresaHome() {
 
   return (
     <div className="empresa-home">
-      <header className="header">
+      
+      {/* ✅ Popup de éxito */}
+      {showSuccessPopup && (
+        <div className="success-popup">
+          {successMessage}
+        </div>
+      )}
+       <header className="header">
         <div className="brand">
           <img src="/RB_LogoWhite.png" alt="Logo" className="logo" />
           <span className="brand-name">reserbus</span>

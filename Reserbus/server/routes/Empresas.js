@@ -34,6 +34,34 @@ router.get('/', async (req, res) => {
     const empresas = await Empresa.findAll();
     res.json(empresas);
 });
+
+// GET ALL BUSES BY EMPRESA
+router.get('/:idEmpresa/buses', async (req, res) => {
+  try {
+    const buses = await Bus.findAll({
+      where: { 
+        id_empresa: req.params.idEmpresa,
+        esta_habilitado: true  // Solo buses habilitados
+      },
+      include: [
+        {
+          model: Piso,
+        },
+        {
+          model: Servicio,
+          as: 'servicios',
+          through: { attributes: [] } // para excluir los datos de la tabla intermedia
+        }
+      ]
+    });
+    res.json(buses);
+  } catch (error) {
+    console.error("Error al obtener buses por empresa:", error);
+    res.status(500).json({ error: 'Error al obtener buses' });
+  }
+});
+
+
 // TEST - INSERT
 router.post('/', async (req, res) => {
     const empresa = req.body;
