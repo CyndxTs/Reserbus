@@ -56,6 +56,7 @@ module.exports = (sequelize, DataTypes) => {
 
     Bus.belongsToMany(models.Servicio, {
       through: models.BusServicio,
+      as: 'servicios',
       foreignKey: 'id_bus',
       otherKey: 'id_servicio',
       onDelete: 'CASCADE',

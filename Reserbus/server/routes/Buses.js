@@ -2,7 +2,6 @@ const express = require('express');
 const router = express.Router();
 const { Bus, Servicio } = require('../models');
 
-
 // TEST - SELECT ALL
 router.get('/', async (req, res) => {
   try {

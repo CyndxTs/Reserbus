@@ -29,6 +29,7 @@ module.exports = (sequelize, DataTypes) => {
   Servicio.associate = (models) => {
     Servicio.belongsToMany(models.Bus, {
       through: models.BusServicio,
+      as: 'buses',
       foreignKey: 'id_servicio',
       otherKey: 'id_bus',
       onDelete: 'CASCADE',

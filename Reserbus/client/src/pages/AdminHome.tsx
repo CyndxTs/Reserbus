@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 
 import './AdminHome.css';
 import { useClient } from '../context/ClientContext';
+import { useNavigate } from 'react-router-dom';
 
 function AdminHome() {
   const { client, clientType } = useClient();
@@ -17,7 +18,7 @@ function AdminHome() {
           <span className="brand-name">reserbus</span>
         </div>
         <div className="header-icons">
-          <img src="/RB_LogoWhite.png" alt="icon-reserbus" className="profile-icon"/>
+          <img src="/Icon_Account.svg" alt="user-profile" className="profile-pic" />
         </div>
       </header>
       <aside className="sidebar">
@@ -31,11 +32,19 @@ function AdminHome() {
       </aside>
 
       <main className="main-content">
-        <h1>Gestión de Usuarios</h1>
-        <button className="primary-button">Añadir Usuario</button>
-        <button className="primary-button">Modificar Usuario</button>
-        <button className="primary-button">Eliminar Usuario</button>
-      
+        <h1 className="main-title left">Gestión de Usuarios</h1>
+
+        <div className="button-group">
+          <button className="primary-button" onClick={() => navigate('/admin/add-user')}>
+            Añadir Usuario
+          </button>
+          <button className="primary-button" onClick={() => navigate('/admin/edit-user')}>
+            Modificar Usuario
+          </button>
+          <button className="primary-button" onClick={() => navigate('/admin/delete-user')}>
+            Eliminar Usuario
+          </button>
+        </div>
       </main>
     </div>
   );

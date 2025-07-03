@@ -1,11 +1,11 @@
 import './App.css';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
-import { ClientProvider } from './context/ClientContext'; // importa tu Provider
-import Home from './pages/Home';
+import { ClientProvider } from './context/ClientContext'; 
+import { BusProvider } from './context/BusContext'; 
 import EmpresaHome from './pages/EmpresaHome';
 import AdminHome from './pages/AdminHome';
-import { BusProvider } from './context/BusContext'; 
-
+import SearchResults from './pages/SearchResults';
+import Home from './pages/Home';
 
 function App() {
   return (
@@ -15,13 +15,14 @@ function App() {
       
           <Routes>
             <Route path="/" element={<Home />} />
-            <Route path="/admin" element={<AdminHome />} />
-            
             <Route path="/empresa/*" element={
               <BusProvider>
                 <EmpresaRoutes />
               </BusProvider>
             } />
+            <Route path="/admin" element={<AdminHome />} />
+            <Route path="/resultados" element={<SearchResults />} /
+
           </Routes>
         </Router>
         
