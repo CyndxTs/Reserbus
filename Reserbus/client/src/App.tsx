@@ -2,10 +2,10 @@ import './App.css';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import { ClientProvider } from './context/ClientContext'; 
 import { BusProvider } from './context/BusContext'; 
-import Home from './pages/Home';
 import EmpresaHome from './pages/EmpresaHome';
 import AdminHome from './pages/AdminHome';
 import SearchResults from './pages/SearchResults';
+import Home from './pages/Home';
 
 function App() {
   return (
