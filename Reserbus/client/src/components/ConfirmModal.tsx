@@ -1,4 +1,4 @@
-import './ConfirmModal.css';
+import './ConfirmModal.scss';
 
 interface ConfirmModalProps {
   title: string;

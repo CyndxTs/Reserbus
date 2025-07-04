@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useClient } from '../context/ClientContext';
+import { useClient,Viajero, Administrador, Empresa } from '../context/ClientContext';
 import { useNavigate } from 'react-router-dom';
 import { formattedClientName,SignInValues,SignUpValues } from '../util/ClientUtil';
 import { SearchValues } from '../util/BuscarViajeUtil';
@@ -9,31 +9,34 @@ import axios from 'axios';
 import { AxiosError } from 'axios';
 import './Header.scss';
 
-interface NavOption {
+export interface NavOption {
   label: string;
   path: string;
 }
 
-interface HeaderProps {
+export interface HeaderProps {
   navOptions?: NavOption[];
 }
 
 const Header = ({ navOptions = [] }: HeaderProps) => {
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const { client,login,logout } = useClient();
+  const {client,clientType,login,logout } = useClient();
   const [showSignInModal, setShowSignInModal] = useState<boolean>(false);
   const [showSignUpModal, setShowSignUpModal] = useState<boolean>(false);
   const [sharedFormData, setSharedFormData] = useState<{ email: string }>({ email: '' });
+  
   const closeModal = () => {
     setShowSignInModal(false);
     setShowSignUpModal(false);
     setSharedFormData({ email: '' });
   }
+
   const SignInSchema = Yup.object().shape({
     email: Yup.string().email('Correo inválido').required('Requerido'),
     password: Yup.string().required('Requerido'),
   });
+
   const handleSignIn = async (
     values: SignInValues,
     { setSubmitting, setFieldError, setFieldValue }: FormikHelpers<SignInValues>
@@ -52,7 +55,8 @@ const Header = ({ navOptions = [] }: HeaderProps) => {
           });
           const clientData = response.data[clientType.toLowerCase()];
           login(clientData, clientType);
-          if(clientType === 'VIAJERO') closeModal();
+          closeModal();
+          if(clientType === 'VIAJERO') navigate('/');
           else if(clientType === 'EMPRESA') navigate('/empresa');
           else if(clientType === 'ADMINISTRADOR') navigate('/admin');
           return;
@@ -72,53 +76,71 @@ const Header = ({ navOptions = [] }: HeaderProps) => {
       setSubmitting(false);
     }
   };
-    const SignUpSchema = Yup.object().shape({
-        email: Yup.string().email('Correo inválido').required('Requerido'),
-        password: Yup.string().min(6,'Minimo 6 caracteres').required('Requerido'),
-        confirmPassword: Yup.string()
-            .oneOf([Yup.ref('password')],'Las contraseñas no coinciden')
-            .required('Requerido'),
-        nombres: Yup.string().matches(/^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$/, 'Solo letras').required('Requerido'),
-        apellidos: Yup.string().matches(/^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$/, 'Solo letras').required('Requerido'),
-        acceptedTerms: Yup.boolean()
-            .oneOf([true], 'Debes aceptar los términos y condiciones'),
-    });
-    const handleSignUp = async (
-        values: SignUpValues,
-        { setSubmitting, setFieldError, setFieldValue }: FormikHelpers<SignUpValues>
-    ) => {
-        try {
-            const response = await axios.post('/api/viajeros/signup', {
-                correo_electronico: values.email,
-                contrasenia: values.password,
-                nombres: values.nombres,
-                apellidos: values.apellidos,
-            });
-            const viajero = response.data.viajero;
-            login(viajero,'VIAJERO');
-            closeModal();
-        } catch (e) {
-            const error = e as AxiosError<{ error: string }>;
-            if (error.response?.status === 409) setFieldError('email', 'Correo ya registrado');
-            else setFieldError('email', 'Error del servidor');
-            setFieldError('password', '');
-            setFieldValue('password','',false);
-            setFieldError('confirmPassword', '');
-            setFieldValue('confirmPassword','',false);
-        } finally {
-            setSubmitting(false);
-        }
-    };
-    const handleSignOut = () => {
-        logout();
-        setIsMenuOpen(false)
-    };
 
-  const handleLogoClick = () => {
+  const SignUpSchema = Yup.object().shape({
+    email: Yup.string().email('Correo inválido').required('Requerido'),
+    password: Yup.string().min(6,'Minimo 6 caracteres').required('Requerido'),
+    confirmPassword: Yup.string()
+      .oneOf([Yup.ref('password')],'Las contraseñas no coinciden')
+      .required('Requerido'),
+    nombres: Yup.string().matches(/^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$/, 'Solo letras').required('Requerido'),
+    apellidos: Yup.string().matches(/^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$/, 'Solo letras').required('Requerido'),
+    acceptedTerms: Yup.boolean()
+      .oneOf([true], 'Debes aceptar los términos y condiciones'),
+  });
+
+  const handleSignUp = async (
+    values: SignUpValues,
+    { setSubmitting, setFieldError, setFieldValue }: FormikHelpers<SignUpValues>
+  ) => {
+    try {
+      const response = await axios.post('/api/viajeros/signup', {
+        correo_electronico: values.email,
+        contrasenia: values.password,
+        nombres: values.nombres,
+        apellidos: values.apellidos,
+      });
+      const viajero = response.data.viajero;
+      login(viajero,'VIAJERO');
+      closeModal();
+    } catch (e) {
+      const error = e as AxiosError<{ error: string }>;
+      if (error.response?.status === 409) setFieldError('email', 'Correo ya registrado');
+      else setFieldError('email', 'Error del servidor');
+      setFieldError('password', '');
+      setFieldValue('password','',false);
+      setFieldError('confirmPassword', '');
+      setFieldValue('confirmPassword','',false);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleSignOut = () => {
+    logout();
+    setIsMenuOpen(false);
     navigate('/');
   };
 
-  const handleClientMenuClick = () => {
+  const handleLogoClick = () => {
+    if (!clientType) {
+      navigate('/');
+      return;
+    }
+
+    switch (clientType) {
+      case 'ADMINISTRADOR':
+        navigate('/admin');
+        break;
+      case 'EMPRESA':
+        navigate('/empresa');
+        break;
+      default:
+        navigate('/');
+    }
+  };
+
+  const handleClientOptionClick = () => {
     if (!client) {
       setShowSignInModal(true);
     } else {
@@ -141,26 +163,36 @@ const Header = ({ navOptions = [] }: HeaderProps) => {
           ))}
         </div>
         <div className="client">
-          <button className="profile" onClick={handleClientMenuClick}>
+          <button className="profile" onClick={handleClientOptionClick}>
             {!client ? (
               <>
                 <span>Iniciar</span>
                 <img src="/Icon_Account.svg" alt="icon-profile" className="icon-profile" />
               </>
             ) : (
-              <span className="name">{formattedClientName(client)}</span>
+              <>
+                <span className="name">{formattedClientName(client)}</span>
+                {clientType == 'EMPRESA' && (
+                  <img  src= {(client as Empresa).logo ? (client as Empresa).logo : "/Icon_Account.svg"} alt="company-icon" className="company-icon" />
+                )}
+                {clientType == 'ADMINISTRADOR' && (
+                  <img  src= {(client as Administrador).foto ? (client as Administrador).foto : "/Icon_Account.svg"} alt="admin-icon" className="admin-icon" />
+                )}
+              </>
             )}
           </button>
           {client && !isMenuOpen && (
             <div className="menu-ddl">
-              <button
-                onClick={() => {
-                  setIsMenuOpen(false);
-                  navigate('/MyAccount');
-                }}
-              >
-                Mi Cuenta
-              </button>
+              {clientType == 'VIAJERO' && (
+                <button
+                  onClick={() => {
+                    setIsMenuOpen(false);
+                    navigate('/MyAccount');
+                  }}
+                >
+                  Mis Viajes
+                </button>
+              )}
               <button onClick={handleSignOut}>Cerrar sesión</button>
             </div>
           )}
@@ -223,7 +255,6 @@ const Header = ({ navOptions = [] }: HeaderProps) => {
           </div>
         </div>
       </div>
-      
       )}
       {/* SignUpModal */}
       {showSignUpModal && (

@@ -1,7 +1,9 @@
+import "./AdminHome.scss";
+import "./AdminEditUser.scss";
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import "./AdminEditUser.css";
+import Header from "../components/Header";
 
 export interface Usuario {
   id: number;
@@ -62,22 +64,19 @@ const EditUser: React.FC = () => {
   });
 
   return (
-    <div className="admin-home">
-      {/* HEADER */}
-      <header className="header">
-        <div className="brand">
-          <img src="/RB_LogoWhite.png" alt="icon-reserbus" className="logo" />
-          <span className="brand-name">reserbus</span>
-        </div>
-        <div className="header-icons">
-          <img src="/Icon_Account.svg" alt="user-profile" className="profile-pic" />
-        </div>
-      </header>
-
+    <div className="p-admin-home">
+      <Header
+        navOptions={[
+          { label: 'Contacto', path: '/contacto' },
+          { label: 'Acerca de nosotros', path: '/acerca-de' }
+        ]}
+      />
       {/* SIDEBAR */}
       <aside className="sidebar">
         <ul>
-          <li className="active">Usuarios</li>
+          <li className="active">
+            <button onClick={ () => navigate('/admin') } >Usuarios</button>
+          </li>
           <li>Roles</li>
           <li>Empresas</li>
           <li>Parámetros</li>
@@ -87,9 +86,7 @@ const EditUser: React.FC = () => {
 
       {/* MAIN */}
       <main className="main-content edit-user">
-        <div className="breadcrumb">Gestión de Usuarios / Modificar Usuario</div>
         <h1 className="main-title left">Modificar Usuario</h1>
-
         <div className="search-bar">
           <input
             type="text"

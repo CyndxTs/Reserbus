@@ -1,7 +1,7 @@
-import React from 'react';
-import './AdminHome.css';
+import './AdminHome.scss';
 import { useClient } from '../context/ClientContext';
 import { useNavigate } from 'react-router-dom';
+import Header from '../components/Header';
 
 function AdminHome() {
   const { client, clientType } = useClient();
@@ -10,19 +10,18 @@ function AdminHome() {
   const admin = clientType === 'ADMINISTRADOR' ? client : null;
 
   return (
-    <div className="admin-home">
-      <header className="header">
-        <div className="brand">
-          <img src="/RB_LogoWhite.png" alt="icon-reserbus" className="logo" />
-          <span className="brand-name">reserbus</span>
-        </div>
-        <div className="header-icons">
-          <img src="/Icon_Account.svg" alt="user-profile" className="profile-pic" />
-        </div>
-      </header>
+    <div className="p-admin-home">
+      <Header
+        navOptions={[
+          { label: 'Contacto', path: '/contacto' },
+          { label: 'Acerca de nosotros', path: '/acerca-de' }
+        ]}
+      />
       <aside className="sidebar">
         <ul>
-          <li className="active">Usuarios</li>
+          <li className="active">
+            <button onClick={ () => navigate('/admin') } >Usuarios</button>
+          </li>
           <li>Roles</li>
           <li>Empresas</li>
           <li>Parámetros</li>

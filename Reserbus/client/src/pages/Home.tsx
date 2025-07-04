@@ -1,18 +1,14 @@
+import './Home.scss';
 import { useClient } from '../context/ClientContext';
-import { formattedClientName,SignInValues,SignUpValues } from '../util/ClientUtil';
 import { SearchValues } from '../util/BuscarViajeUtil';
-import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Formik, Form, Field, ErrorMessage, FormikHelpers } from 'formik';
 import * as Yup from 'yup';
 import axios from 'axios';
-import { AxiosError } from 'axios';
-import './Home.scss';
-import Header from '../componentss/Header';
+import Header from '../components/Header';
 
 function Home() {
   const navigate = useNavigate();
-  const { login,logout } = useClient();
   const SearchSchema = Yup.object().shape({
     origen: Yup.string().required('Campo requerido'),
     destino: Yup.string().required('Campo requerido'),

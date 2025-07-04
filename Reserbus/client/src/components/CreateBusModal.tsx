@@ -1,7 +1,7 @@
+import './CreateBusModal.scss';
 import { Formik, Form, Field, ErrorMessage } from 'formik';
 import { Bus, useBus } from '../context/BusContext';
 import { CreateBusSchema, cantidadPisosOptions } from '../util/BusUtil';
-import './CreateBusModal.css';
 
 interface CreateBusModalProps {
   onClose: () => void;

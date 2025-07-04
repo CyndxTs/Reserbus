@@ -1,8 +1,10 @@
-import React from "react";
+import "./AdminHome.scss";
+import "./AdminAddUser.scss";
 import { Formik, Form, Field, ErrorMessage, FormikHelpers } from "formik";
+import { useNavigate } from 'react-router-dom';
 import * as Yup from "yup";
 import axios from "axios";
-import "./AdminAddUser.css";
+import Header from "../components/Header";
 
 interface AddUserValues {
   email: string;
@@ -27,6 +29,7 @@ const AddUserSchema = Yup.object().shape({
 });
 
 function AddUser() {
+  const navigate = useNavigate();
   const handleAddUser = async (
     values: AddUserValues,
     { setSubmitting, resetForm }: FormikHelpers<AddUserValues>
@@ -58,20 +61,18 @@ function AddUser() {
   };
 
   return (
-    <div className="admin-home">
-      <header className="header">
-        <div className="brand">
-          <img src="/RB_LogoWhite.png" alt="icon-reserbus" className="logo" />
-          <span className="brand-name">reserbus</span>
-        </div>
-        <div className="header-icons">
-          <img src="/Icon_Account.svg" alt="user-profile" className="profile-pic" />
-        </div>
-      </header>
-
+    <div className="p-admin-home">
+      <Header
+        navOptions={[
+          { label: 'Contacto', path: '/contacto' },
+          { label: 'Acerca de nosotros', path: '/acerca-de' }
+        ]}
+      />
       <aside className="sidebar">
         <ul>
-          <li className="active">Usuarios</li>
+          <li className="active">
+            <button onClick={ () => navigate('/admin') } >Usuarios</button>
+          </li>
           <li>Roles</li>
           <li>Empresas</li>
           <li>Parámetros</li>
@@ -80,7 +81,6 @@ function AddUser() {
       </aside>
 
       <main className="main-content add-user">
-        <div className="breadcrumb">Gestión de Usuarios / Añadir Usuario</div>
         <h1 className="main-title left">Añadir Usuario</h1>
 
         <Formik

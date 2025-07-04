@@ -1,12 +1,11 @@
-import React, { useEffect, useState } from 'react';
-import './SearchResults.css'; 
+import './SearchResults.scss'; 
+import { useEffect, useState } from 'react';
 import { useClient } from '../context/ClientContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { addDays,format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import Header from '../componentss/Header';
-import setShowSignInModal from '../pages/Home';
 import { Tarifa, Empresa, Ruta, Viaje, SearchParams, LocationState } from '../util/BuscarViajeUtil';
+import Header from '../components/Header';
 
 function SearchResults() {
   const { client, clientType } = useClient();
@@ -17,10 +16,7 @@ function SearchResults() {
   const [parametros, setParametros] = useState<SearchParams | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
-
-
-  
+    
   // Barra de fechas dinámica
   const renderDateBar = () => {
     if (!parametros?.fecha_salida) return null;
@@ -35,7 +31,7 @@ function SearchResults() {
           return (
             <button
               key={offset}
-              className={`date-btn${isActive ? " active" : ""}`}
+              className={`date-btn${isActive ? "-active" : ""}`}
               // onClick: aquí podrías cambiar la fecha de búsqueda si lo deseas
             >
               {label.charAt(0).toUpperCase() + label.slice(1)}
@@ -83,7 +79,6 @@ function SearchResults() {
     return `${h}h ${m}m`;
   };
   
-
   // Obtener el precio mínimo de las tarifas
   const getPrecioMinimo = (tarifas: Tarifa[]) => {
     if (!tarifas || tarifas.length === 0) return "No disponible";
@@ -108,7 +103,7 @@ function SearchResults() {
   }
 
   return (
-    <div className="search-results">
+    <div className="p-search-results">
       <Header
         navOptions={[
           { label: 'Contacto', path: '/contacto' },
@@ -117,9 +112,15 @@ function SearchResults() {
       />
       {/* Barra de pasos */}
       <div className="steps-bar">
-      <div className="step active"><span className="step-circle">1</span><br /><span>Destino y fecha</span></div>
-      <div className="step"><span className="step-circle">2</span><br /><span>Selecciona tus asientos</span></div>
-      <div className="step"><span className="step-circle">3</span><br /><span>Realiza el pago</span></div>
+        <div className="step-active">
+          <span className="circle">1</span><br /><span>Destino y fecha</span>
+        </div>
+        <div className="step">
+          <span className="circle">2</span><br /><span>Selecciona tus asientos</span>
+        </div>
+        <div className="step">
+          <span className="circle">3</span><br /><span>Realiza el pago</span>
+        </div>
       </div>
 
       {/* Barra de fechas */}
@@ -134,78 +135,76 @@ function SearchResults() {
       </div>
 
       <div className="results-layout">
-  {/* FILTROS */}
-  <aside className="filtros">
-    <h3>Hora de salida</h3>
-    <ul>
-      <li><input type="checkbox" /> Nocturno (antes de 6 a. m.)</li>
-      <li><input type="checkbox" /> Temprano (6 a. m. - 11 a. m.)</li>
-      <li><input type="checkbox" /> Mediodía (11 a. m. - 5 p. m.)</li>
-      <li><input type="checkbox" /> Tarde (después de 5 p. m.)</li>
-    </ul>
-
-    <h3>Entretenimiento</h3>
-    <ul>
-      <li><input type="checkbox" /> Película</li>
-      <li><input type="checkbox" /> Luz de lectura</li>
-      <li><input type="checkbox" /> TV</li>
-    </ul>
-
-    <h3>Servicios</h3>
-    <ul>
-      <li><input type="checkbox" /> Baño</li>
-      <li><input type="checkbox" /> Aire acondicionado</li>
-      <li><input type="checkbox" /> USB</li>
-    </ul>
-  </aside>
-
-  {/* RESULTADOS */}
-  <section className="resultados">
-    <div className="resultados-header">
-      <div>Se encontraron {viajes.length} resultados</div>
-      <div>
-        Ordenar por:
-        <select>
-          <option value="">Seleccionar</option>
-          <option value="precio">Precio</option>
-          <option value="duracion">Duración</option>
-        </select>
+        {/* FILTROS */}
+        <aside className="filters">
+          <h3>Hora de salida</h3>
+          <ul>
+            <li><input type="checkbox" /> Nocturno (antes de 6 a. m.)</li>
+            <li><input type="checkbox" /> Temprano (6 a. m. - 11 a. m.)</li>
+            <li><input type="checkbox" /> Mediodía (11 a. m. - 5 p. m.)</li>
+            <li><input type="checkbox" /> Tarde (después de 5 p. m.)</li>
+          </ul>
+          <h3>Entretenimiento</h3>
+          <ul>
+            <li><input type="checkbox" /> Película</li>
+            <li><input type="checkbox" /> Luz de lectura</li>
+            <li><input type="checkbox" /> TV</li>
+          </ul>
+          <h3>Servicios</h3>
+          <ul>
+            <li><input type="checkbox" /> Baño</li>
+            <li><input type="checkbox" /> Aire acondicionado</li>
+            <li><input type="checkbox" /> USB</li>
+          </ul>
+        </aside>
+        {/* RESULTADOS */}
+        <section className="results">
+          <div className="header">
+            <div>Se encontraron {viajes.length} resultados</div>
+            <div>
+              Ordenar por:
+              <select>
+                <option value="">Seleccionar</option>
+                <option value="precio">Precio</option>
+                <option value="duracion">Duración</option>
+              </select>
+            </div>
+          </div>
+          <div className="trip-list">
+            {viajes.map((viaje) => (
+              <div className="card" key={viaje.id_viaje}>
+                <div className="card-company">
+                  <div className="name">{viaje.empresa?.razon_social || 'Empresa'}</div>
+                  <div className="service">Cama 160°/180°</div>
+                  <div className="show-detail">Ver detalles</div>
+                </div>
+                <div className="card-schedule">
+                  <div className="departure-time">
+                    <span className="time">{getHoraInicio(viaje.instante_abordaje)}</span>
+                    <div className="city">{viaje.ruta?.origen}</div>
+                  </div>
+                  <div className="info-arrow">
+                    <span className="icon">→</span>
+                    <div className="duration">{formatDuracion(viaje.duracion_estimada_minutos || 0)}</div>
+                  </div>
+                  <div className="arrival-time">
+                    <span className="time">{getHoraLlegada(viaje.instante_abordaje, viaje.duracion_estimada_minutos || 0)}</span>
+                    <div className="city">{viaje.ruta?.destino}</div>
+                  </div>
+                </div>
+                <div className="card-precio">
+                  <div className="origin">Desde:</div>
+                  <div className="price">{getPrecioMinimo(viaje.tarifas)}</div>
+                  <button>Ver asientos</button>
+                  <div className="available">
+                    {viaje.tarifas.length > 0 ? '20 disponibles' : 'No disponibles'}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
       </div>
-    </div>
-
-    <div className="viajes-list">
-      {viajes.map((viaje) => (
-        <div className="viaje-card" key={viaje.id_viaje}>
-          <div className="card-empresa">
-            <div className="empresa-nombre">{viaje.empresa?.razon_social || 'Empresa'}</div>
-            <div className="servicio">Cama 160°/180°</div>
-            <div className="ver-detalles">Ver detalles</div>
-          </div>
-          <div className="card-horarios">
-            <div className="hora-salida">
-              <span className="hora">{getHoraInicio(viaje.instante_abordaje)}</span>
-              <div className="ciudad">{viaje.ruta?.origen}</div>
-            </div>
-            <div className="flecha-horario">
-              <span className="arrow">→</span>
-              <div className="duracion">{formatDuracion(viaje.duracion_estimada_minutos || 0)}</div>
-            </div>
-            <div className="hora-llegada">
-              <span className="hora">{getHoraLlegada(viaje.instante_abordaje, viaje.duracion_estimada_minutos || 0)}</span>
-              <div className="ciudad">{viaje.ruta?.destino}</div>
-            </div>
-          </div>
-          <div className="card-precio">
-            <div className="desde">Desde:</div>
-            <div className="precio">{getPrecioMinimo(viaje.tarifas)}</div>
-            <button className="btn-asientos">Ver asientos</button>
-            <div className="disponibles">{viaje.tarifas.length > 0 ? '20 disponibles' : 'No disponibles'}</div>
-          </div>
-        </div>
-      ))}
-    </div>
-  </section>
-</div>
     </div>
   );
 }

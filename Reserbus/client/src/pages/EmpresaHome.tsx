@@ -1,18 +1,18 @@
-import React, { useState,useEffect } from 'react';
-import './EmpresaHome.css';
+import './EmpresaHome.scss';
+import { useState,useEffect } from 'react';
 import { useClient,Empresa } from '../context/ClientContext';
 import { useNavigate } from 'react-router-dom';
 import { formattedClientName } from '../util/ClientUtil';
 import { Formik, Form, Field, ErrorMessage } from 'formik';
 import { Bus, useBus } from '../context/BusContext';
-import ConfirmModal from '../componentss/ConfirmModal';
-import CreateBusModal from '../componentss/CreateBusModal';
+import ConfirmModal from '../components/ConfirmModal';
+import CreateBusModal from '../components/CreateBusModal';
+import Header from '../components/Header';
 
 function EmpresaHome() {
   const { client, clientType, logout } = useClient();
   const navigate = useNavigate();
   const [activeSection, setActiveSection] = useState('dashboard');
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
   const [modalOpen, setModalOpen] = useState<string | null>(null);
   const empresa = clientType === 'EMPRESA' ? client as Empresa : null;
   const [showBusModal, setShowBusModal] = useState(false);
@@ -23,11 +23,6 @@ function EmpresaHome() {
   const [selectedBus, setSelectedBus] = useState<Bus | null>(null);
   const { deleteBus } = useBus();
   const [busAEliminar, setBusAEliminar] = useState<Bus | null>(null);
-
-  const handleSignOut = () => {
-    logout();
-    navigate('/');
-  };
 
   const openModal = (modalType: string) => {
     setModalOpen(modalType);
@@ -45,7 +40,6 @@ function EmpresaHome() {
       console.log("Buses cargados:", buses);
     }
   }, [empresa]);
-
 
   // Ocultar popup después de 3 segundos
   useEffect(() => {
@@ -213,7 +207,8 @@ function EmpresaHome() {
         );
         case 'buses':
         return (
-          <div className="section-content">            <div className="section-header">
+          <div className="section-content">
+            <div className="section-header">
               <h1>Gestión de Buses</h1>
               <button className="primary-button" onClick={() => openModal('bus')}>
                 <svg viewBox="0 0 25 15" fill="currentColor">
@@ -1249,41 +1244,14 @@ function EmpresaHome() {
   };
 
   return (
-    <div className="empresa-home">
-      <header className="header">
-        <div className="brand">
-          <img src="/RB_LogoWhite.png" alt="Logo" className="logo" />
-          <span className="brand-name">reserbus</span>
-          <span className="brand-subtitle">Empresas</span>
-        </div>
-        <div className="header-right">
-          <div className="user-menu">
-            <div className="user-info">
-              <img src="/Icon_Account.svg" alt="user-profile" className="profile-pic" />
-              <span className="user-name">{(empresa as any)?.razon_social || formattedClientName(empresa)}</span>
-            </div>
-            <div className="user-dropdown">
-              <button onClick={() => setActiveSection('perfil')}>Mi Perfil</button>
-              <button onClick={() => setActiveSection('configuracion')}>Configuración</button>
-              <button onClick={handleSignOut}>Cerrar Sesión</button>
-            </div>
-          </div>
-        </div>
-      </header>      <aside className={`sidebar ${sidebarCollapsed ? 'collapsed' : ''}`}>
-        <div className="sidebar-toggle">
-          <button 
-            className="toggle-btn"
-            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-          >
-            <svg viewBox="0 0 24 24" fill="currentColor">
-              {sidebarCollapsed ? (
-                <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/>
-              ) : (
-                <path d="M3 18h13v-2H3v2zm0-5h10v-2H3v2zm0-7v2h13V6H3zm18 9.59L17.42 12 21 8.42 19.58 7l-5 5 5 5L21 15.59z"/>
-              )}
-            </svg>
-          </button>
-        </div>
+    <div className="p-empresa-home">
+      <Header
+        navOptions={[
+          { label: 'Contacto', path: '/contacto' },
+          { label: 'Acerca de nosotros', path: '/acerca-de' }
+        ]}
+      />
+      <aside className="sidebar">
         <nav className="sidebar-nav">
           <button 
             className={activeSection === 'dashboard' ? 'nav-item active' : 'nav-item'}
@@ -1347,7 +1315,8 @@ function EmpresaHome() {
             <span className="nav-text">Reservas</span>
           </button>
         </nav>
-      </aside>      <main className={`main-content ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
+      </aside>
+      <main className="main-content">
         {renderMainContent()}
       </main>
       

@@ -1,0 +1,82 @@
+.p-admin-home { 
+  .main-title {
+    font-size: 2rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+  }
+
+  /* === BARRA DE BÚSQUEDA Y FILTROS === */
+  .search-bar {
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    width: 100%;
+  }
+
+  .search-bar input {
+    flex: 0 0 300px;
+    padding: 10px 14px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    font-size: 0.95rem;
+  }
+
+  .filter-button {
+    padding: 10px 14px;
+    border: none;
+    background: #eee;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.95rem;
+  }
+
+  /* === TABLA DE USUARIOS === */
+  .table-container {
+    width: 100%;
+    overflow-x: auto;
+  }
+
+  .user-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.95rem;
+    background: #fff;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .user-table th,
+  .user-table td {
+    text-align: left;
+    padding: 12px 16px;
+    border-bottom: 1px solid #f0f0f0;
+  }
+
+  .user-table thead {
+    background: #f8f8f8;
+    font-weight: bold;
+  }
+
+  .user-table tbody tr:last-child td {
+    border-bottom: none;
+  }
+
+  .acciones {
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 1.1rem;
+    cursor: pointer;
+  }
+
+  .acciones span {
+    transition: opacity 0.2s ease;
+  }
+
+  .acciones span:hover {
+    opacity: 0.7;
+  }
+}

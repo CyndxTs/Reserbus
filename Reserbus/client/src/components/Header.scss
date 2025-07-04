@@ -1,4 +1,5 @@
 .c-navbar {
+  position: fixed;
   display: flex;
   justify-content: space-between;
   background-color: #ffffff;
@@ -71,14 +72,24 @@
         height: 100%;
         padding: 0 24px;
 
-        img {
-          width: 32px;
-          height: 32px;
+        .icon-profile {
+          width: 40%;
+          height: 40%;
           color: #4d15f0;
         }
 
         .name {
           color: #4d15f0;
+        }
+
+        .company-icon {
+          width: 65%;
+          height: 65%;
+        }
+
+        .admin-icon {
+          width: 35%;
+          height: 35%;
         }
       }
 
@@ -91,6 +102,7 @@
       .menu-ddl {
         position: absolute;
         top: 100%;
+        width: 98%;
         left: 50%;
         transform: translateX(-50%);
         background-color: white;
@@ -104,11 +116,11 @@
         border-top: none;
         border-radius: 12px;
 
-        .button {
+        button {
           all: unset;
           display: block;
           width: 100%;
-          padding: 12px 18px; /* o ajusta si prefieres 16px */
+          padding: 12px 12px;
           font-size: 1rem;
           font-weight: 500;
           color: #333;
