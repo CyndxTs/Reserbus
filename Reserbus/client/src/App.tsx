@@ -11,6 +11,7 @@ import SearchResults from './pages/SearchResults';
 import Home from './pages/Home';
 import { TarifaProvider } from './context/TarifaContext';
 import TarifaDemoForm from './components/TarifaModal';
+import { ReservaProvider } from './context/ReservationContext';
 
 function App() {
   return (
@@ -21,7 +22,9 @@ function App() {
             <Route path="/" element={<Home />} />
             <Route path="/empresa/*" element={
               <BusProvider>
+              <ReservaProvider>
                 <EmpresaRoutes />
+              </ReservaProvider>
               </BusProvider>
             } />
             <Route path="/admin" element={<AdminHome />} />
