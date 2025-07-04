@@ -4,10 +4,8 @@ import { useClient,Empresa } from '../context/ClientContext';
 import { useNavigate } from 'react-router-dom';
 import { formattedClientName } from '../util/ClientUtil';
 import { Formik, Form, Field, ErrorMessage } from 'formik';
-import { Bus, useBus } from '../context/BusContext';
-import ConfirmModal from '../components/ConfirmModal';
-import CreateBusModal from '../components/CreateBusModal';
 import Header from '../components/Header';
+import BusManagement from '../components/BusManagement';
 
 function EmpresaHome() {
   const { client, clientType, logout } = useClient();
@@ -15,14 +13,6 @@ function EmpresaHome() {
   const [activeSection, setActiveSection] = useState('dashboard');
   const [modalOpen, setModalOpen] = useState<string | null>(null);
   const empresa = clientType === 'EMPRESA' ? client as Empresa : null;
-  const [showBusModal, setShowBusModal] = useState(false);
-  const [showSuccessPopup, setShowSuccessPopup] = useState(false);
-  const [successMessage, setSuccessMessage] = useState("");
-  const [searchQuery, setSearchQuery] = useState("");
-  const { buses, fetchBuses } = useBus();
-  const [selectedBus, setSelectedBus] = useState<Bus | null>(null);
-  const { deleteBus } = useBus();
-  const [busAEliminar, setBusAEliminar] = useState<Bus | null>(null);
 
   const openModal = (modalType: string) => {
     setModalOpen(modalType);
@@ -31,59 +21,6 @@ function EmpresaHome() {
   const closeModal = () => {
     setModalOpen(null);
   };
-
-  // Cargar buses al montar el componente
-  useEffect(() => {
-    console.log("Empresa cargada", empresa)
-    if (empresa) {
-      fetchBuses(empresa.id_empresa);
-      console.log("Buses cargados:", buses);
-    }
-  }, [empresa]);
-
-  // Ocultar popup después de 3 segundos
-  useEffect(() => {
-    if (showSuccessPopup) {
-      const timer = setTimeout(() => setShowSuccessPopup(false), 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [showSuccessPopup]);
-  const handleSuccess = (action: 'create' | 'update' | 'delete') => {
-    let message = "";
-    switch(action) {
-      case 'create':
-        message = "Bus creado correctamente ✅";
-        break;
-      case 'update':
-        message = "Bus actualizado correctamente ✅";
-        break;
-      case 'delete':
-        message = "Bus eliminado correctamente ✅";
-        break;
-    }
-    setSuccessMessage(message);
-    setShowSuccessPopup(true);
-  };
-  const handleEliminarBus = async (id: number) => {
-    if (!window.confirm("¿Estás seguro de eliminar este bus?")) return;
-
-    try {
-      await deleteBus(id);
-      if(empresa) {
-        fetchBuses(empresa.id_empresa); // refrescar la lista
-      }
-    } catch (error) {
-      alert("Error al eliminar el bus.");
-    }
-  };
-
-  // Filtrar información de buses (para el buscador)
-  const filteredBuses = buses.filter(bus => 
-    bus.placa.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    bus.marca.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    bus.modelo.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
 
   const renderMainContent = () => {
     switch (activeSection) {
@@ -206,90 +143,8 @@ function EmpresaHome() {
           </div>
         );
         case 'buses':
-        return (
-          <div className="section-content">
-            <div className="section-header">
-              <h1>Gestión de Buses</h1>
-              <button className="primary-button" onClick={() => openModal('bus')}>
-                <svg viewBox="0 0 25 15" fill="currentColor">
-                  <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
-                </svg>
-                Nuevo Bus
-              </button>
-            </div>
-            
-            <div className="data-grid">
-              <div className="grid-filters">
-                <input type="text" placeholder="Buscar por placa..." className="search-input" />
-                <select className="filter-select">
-                  <option>Todos los estados</option>
-                  <option>Activo</option>
-                  <option>Mantenimiento</option>
-                  <option>Inactivo</option>
-                </select>
-              </div>
-              
-              <div className="data-table">
-                <div className="table-header">
-                  <span>Placa</span>
-                  <span>Marca/Modelo</span>
-                  <span>Pisos</span>
-                  <span>Asientos</span>
-                  <span>Estado</span>
-                  <span>Acciones</span>
-                </div>
-                
-                <div className="table-row">
-                  <span className="bus-plate">ABC-123</span>
-                  <span>Mercedes-Benz / Sprinter</span>
-                  <span>2</span>
-                  <span>40</span>
-                  <span className="status active">Activo</span>
-                  <div className="actions">
-                    <button className="action-edit">Editar</button>
-                    <button className="action-view">Ver</button>
-                  </div>
-                </div>
-                
-                <div className="table-row">
-                  <span className="bus-plate">XYZ-456</span>
-                  <span>Volvo / 9700</span>
-                  <span>2</span>
-                  <span>45</span>
-                  <span className="status maintenance">Mantenimiento</span>
-                  <div className="actions">
-                    <button className="action-edit">Editar</button>
-                    <button className="action-view">Ver</button>
-                  </div>
-                </div>
-                
-                <div className="table-row">
-                  <span className="bus-plate">DEF-789</span>
-                  <span>Scania / Irizar</span>
-                  <span>1</span>
-                  <span>35</span>
-                  <span className="status active">Activo</span>
-                  <div className="actions">
-                    <button className="action-edit">Editar</button>
-                    <button className="action-view">Ver</button>
-                  </div>
-                </div>
-                
-                <div className="table-row">
-                  <span className="bus-plate">GHI-012</span>
-                  <span>Mercedes-Benz / OH1526</span>
-                  <span>2</span>
-                  <span>42</span>
-                  <span className="status active">Activo</span>
-                  <div className="actions">
-                    <button className="action-edit">Editar</button>
-                    <button className="action-view">Ver</button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        );
+        return <BusManagement empresa={empresa} />;
+
         case 'rutas':
         return (
           <div className="section-content">            <div className="section-header">

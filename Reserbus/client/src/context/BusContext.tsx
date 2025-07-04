@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
 import axios from 'axios';
 
 // Tipos basados en tus modelos
@@ -71,19 +71,19 @@ export const BusProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   // Funciones para buses
-  const fetchBuses = async (idEmpresa: number) => {
-  setLoading(true);
-  try {
-    const response = await axios.get(`/api/empresas/${idEmpresa}/buses`, {
-      params: { 
-        include: ['servicios', 'Pisos'] // Asegúrate de incluir esto
-      }
-    });
-    setBuses(response.data);
-  } finally {
-    setLoading(false);
-  }
-};
+  const fetchBuses = useCallback(async (idEmpresa: number) => {
+    setLoading(true);
+    try {
+      const response = await axios.get(`/api/empresas/${idEmpresa}/buses`, {
+        params: { 
+          include: ['servicios', 'Pisos'] // Asegúrate de incluir esto
+        }
+      });
+      setBuses(response.data);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
   
 
  const getBus = async (idBus: number) => {
