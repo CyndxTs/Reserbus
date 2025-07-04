@@ -1,145 +1,255 @@
 // src/pages/ReservationManagement.tsx
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { Empresa } from '../context/ClientContext';
-import axios from 'axios';
-
-interface Reserva {
-  id_reserva: number;
-  estado: string;
-  id_viajero: number;
-  id_viaje_ida: number;
-  id_viaje_vuelta?: number;
-  id_pago?: number;
-  esta_habilitado: boolean;
-  pasajero?: string;
-  ruta?: string;
-  fecha?: string;
-  hora?: string;
-}
+import { useReserva } from '../context/ReservationContext';
 
 const ReservationManagement = (
-    { openModal, empresa }: { openModal: (modal: string) => void; empresa: Empresa | null }) => {
-  const [reservas, setReservas] = useState<Reserva[]>([]);
+  { openModal, empresa }: 
+  { openModal: (modal: string) => void; empresa: Empresa | null }
+) => {
   
-  const fetchReservas = async () => {
-    const res = await axios.get('/api/reservas');
-    const enriched = res.data.filter((r: Reserva) => r.esta_habilitado).map((r: Reserva) => ({
-      ...r,
-      pasajero: 'Nombre Apellido', // Placeholder
-      ruta: 'Lima → Cusco', // Placeholder
-      fecha: '23 Jun 2025', // Placeholder
-      hora: '21:45' // Placeholder
-    }));
-    setReservas(enriched);
+  // Hooks de Context
+  const { 
+    reservas, 
+    fetchReservasByEmpresa, 
+    loading, 
+    error, 
+    clearError 
+  } = useReserva();
+
+  // Estados para filtros
+  const [estadoFiltro, setEstadoFiltro] = useState('');
+  const [rutaFiltro, setRutaFiltro] = useState('');
+  const [codigoFiltro, setCodigoFiltro] = useState('');
+  const [fechaFiltro, setFechaFiltro] = useState('');
+  const [pasajeroFiltro, setPasajeroFiltro] = useState('');
+
+  // Aplicar filtros a las reservas
+  const reservasFiltradas = useMemo(() => {
+    if (!Array.isArray(reservas)) return [];
+
+    return reservas.filter(reserva => {
+        // Convertir todo a minúsculas para búsqueda case-insensitive
+        const searchTerm = (codigoFiltro || pasajeroFiltro).toLowerCase();
+        const rutaTerm = rutaFiltro.toLowerCase();
+        const fechaTerm = fechaFiltro;
+
+        // Filtros
+        const matches = {
+        estado: estadoFiltro ? reserva.estado === estadoFiltro : true,
+        ruta: rutaTerm ? (reserva.ruta || '').toLowerCase().includes(rutaTerm) : true,
+        codigo: codigoFiltro ? reserva.id_reserva.toString().includes(searchTerm) : true,
+        fecha: fechaTerm ? (reserva.fechaIda || '').includes(fechaTerm) : true,
+        busqueda: searchTerm ? (
+            reserva.id_reserva.toString().includes(searchTerm) ||
+            (reserva.pasajero?.documento || '').toLowerCase().includes(searchTerm) ||
+            `${reserva.pasajero?.nombres || ''} ${reserva.pasajero?.apellidos || ''}`
+            .toLowerCase().includes(searchTerm) ||
+            `${reserva.viajero?.nombres || ''} ${reserva.viajero?.apellidos || ''}`
+            .toLowerCase().includes(searchTerm)
+        ) : true
+        };
+
+        return matches.estado && matches.ruta && matches.codigo && 
+            matches.fecha && matches.busqueda;
+    });
+  }, [reservas, estadoFiltro, rutaFiltro, codigoFiltro, fechaFiltro, pasajeroFiltro]);
+
+  // Obtener rutas únicas para el filtro
+  const rutasUnicas = useMemo(() => {
+    if (!Array.isArray(reservas) || reservas.length === 0) return [];
+    const rutas = reservas.map(r => r.ruta).filter(Boolean);
+    return [...new Set(rutas)];
+  }, [reservas]);
+
+  // Mapear estados para mostrar en español
+  const obtenerEstadoEnEspanol = (estado: string) => {
+    const estadosMap: { [key: string]: string } = {
+      'PAGO_PENDIENTE': 'Pendiente',
+      'PAGADA': 'Confirmada',
+      'COMPLETADA': 'Completada',
+      'CANCELADA': 'Cancelada'
+    };
+    return estadosMap[estado] || estado;
   };
 
+  // Obtener clase CSS para el estado
+  const obtenerClaseEstado = (estado: string) => {
+    const clasesMap: { [key: string]: string } = {
+      'PAGO_PENDIENTE': 'pendiente',
+      'PAGADA': 'confirmada',
+      'COMPLETADA': 'completada',
+      'CANCELADA': 'cancelada'
+    };
+    return clasesMap[estado] || 'pendiente';
+  };
+
+  // Cargar reservas de la empresa al montar el componente
   useEffect(() => {
-    fetchReservas();
-  }, []);
+    if (empresa?.id_empresa) {
+      fetchReservasByEmpresa(empresa.id_empresa);
+    }
+  }, [empresa?.id_empresa]);
+
+  // Limpiar filtros
+  const limpiarFiltros = () => {
+    setEstadoFiltro('');
+    setRutaFiltro('');
+    setCodigoFiltro('');
+    setFechaFiltro('');
+    setPasajeroFiltro('');
+  };
 
   return (
     <div className="section-content">
       <div className="section-header">
         <h1>Gestión de Reservas</h1>
-        <button className="primary-button" onClick={() => openModal('reserva')}>
-          <svg viewBox="0 0 25 15" fill="currentColor">
+        {/* <button className="primary-button" onClick={() => openModal('reserva')}>
+          <svg viewBox="0 0 24 24" fill="currentColor">
             <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
           </svg>
           Nueva Reserva
-        </button>
+        </button> */}
       </div>
 
+      {/* Mostrar errores */}
+      {error && (
+        <div className="error-message">
+          {error}
+          <button onClick={clearError}>×</button>
+        </div>
+      )}
+
       <div className="data-grid">
+        {/* Filtros */}
         <div className="reservation-filters">
-          <input type="text" placeholder="Buscar por código de reserva, pasajero..." className="search-input" />
-          <select className="filter-select">
-            <option>Todos los estados</option>
-            <option>Confirmada</option>
-            <option>Pendiente</option>
-            <option>Cancelada</option>
-            <option>Completada</option>
+          <input 
+            type="text" 
+            placeholder="Buscar por código, DNI o pasajero..." 
+            className="search-input" 
+            value={codigoFiltro || pasajeroFiltro}
+            onChange={(e) => {
+              const value = e.target.value;
+              // Si es numérico, buscar por código/DNI, si no por pasajero
+              if (/^\d*$/.test(value)) {
+                setCodigoFiltro(value);
+                setPasajeroFiltro('');
+              } else {
+                setPasajeroFiltro(value);
+                setCodigoFiltro('');
+              }
+            }}
+          />
+          
+          <select 
+            className="filter-select"
+            value={estadoFiltro}
+            onChange={(e) => setEstadoFiltro(e.target.value)}
+          >
+            <option value="">Todos los estados</option>
+            <option value="PAGADA">Confirmada</option>
+            <option value="PAGO_PENDIENTE">Pendiente</option>
+            <option value="CANCELADA">Cancelada</option>
+            <option value="COMPLETADA">Completada</option>
           </select>
-          <input type="date" className="date-filter" placeholder="Fecha" />
-          <select className="filter-select">
-            <option>Todas las rutas</option>
-            <option>Lima → Arequipa</option>
-            <option>Arequipa → Cusco</option>
-            <option>Lima → Trujillo</option>
-            <option>Cusco → Lima</option>
+
+          <input 
+            type="date" 
+            className="date-filter" 
+            placeholder="Fecha" 
+            value={fechaFiltro} 
+            onChange={(e) => setFechaFiltro(e.target.value)}
+          />
+
+          <select 
+            className="filter-select"
+            value={rutaFiltro}
+            onChange={(e) => setRutaFiltro(e.target.value)}
+          >
+            <option value="">Todas las rutas</option>
+            {rutasUnicas.map(ruta => (
+              <option key={ruta} value={ruta}>{ruta}</option>
+            ))}
           </select>
+
+          <button 
+            className="secondary-button" 
+            onClick={limpiarFiltros}
+            title="Limpiar filtros"
+          >
+            Limpiar
+          </button>
         </div>
 
+        {/* Tabla de reservas */}
         <div className="data-table">
           <div className="table-header">
-            <span>DNI</span>
-            <span>Pasajero</span>
-            <span>Ruta</span>
-            <span>Fecha/Hora</span>
+            <span>Viajero</span>
+            <span>Ida</span>
+            <span>Vuelta</span>
             <span>Estado</span>
-            <span>Acciones</span>
+            <span>Pago</span>
+            <span>Bus</span>
           </div>
 
-          {reservas.map((reserva) => (
+          {loading ? (
+            <div className="loading-message">Cargando reservas...</div>
+          ) : reservasFiltradas.length === 0 ? (
+            <div className="no-results">
+              {!Array.isArray(reservas) || reservas.length === 0 ? 
+                'No hay reservas registradas para esta empresa.' : 
+                'No se encontraron reservas que coincidan con los filtros aplicados.'
+              }
+            </div>
+          ) : (
+            reservasFiltradas.map((reserva) => (
             <div key={reserva.id_reserva} className="table-row">
-              <span className="reservation-code">{reserva.id_viajero}</span>
-              <div className="passenger-info">
-                <span className="passenger-name">{reserva.pasajero}</span>
-              </div>
-              <div className="route-info">
-                <span className="route-path">{reserva.ruta}</span>
-                <span className="route-details">Bus XYZ - Asiento 8B</span>
-              </div>
-              <div className="datetime-info">
-                <span className="date-part">{reserva.fecha}</span>
-                <span className="time-part">{reserva.hora}</span>
-              </div>
-              <span className={`status ${reserva.estado.toLowerCase()}`}>{reserva.estado}</span>
-              <div className="actions">
-                <button className="action-edit">Editar</button>
-                <button className="action-view">Ver</button>
-              </div>
-            </div>
-          ))}
-            <div className="table-row">
-                <span className="reservation-code">55667788</span>
                 <div className="passenger-info">
-                <span className="passenger-name">Roberto Silva Torres</span>
-                </div>
-                <div className="route-info">
-                <span className="route-path">Cusco → Lima</span>
-                <span className="route-details">Bus GHI-012 - Asiento 20A</span>
+                    <span className="passenger-name">
+                        {reserva.pasajero?.nombres} {reserva.pasajero?.apellidos}
+                    </span>
+                    <span className="passenger-dni">
+                        {reserva.pasajero?.tipoDocumento || 'N/A'} {reserva.pasajero?.documento || 'N/A'}
+                    </span>
                 </div>
                 <div className="datetime-info">
-                <span className="date-part">22 Jun 2025</span>
-                <span className="time-part">20:00</span>
-                </div>
-                <span className="status confirmada">Confirmada</span>
-                <div className="actions">
-                <button className="action-edit">Editar</button>
-                <button className="action-view">Ver</button>
-                </div>
-            </div>
-            
-            <div className="table-row">
-                <span className="reservation-code">99887766</span>
-                <div className="passenger-info">
-                <span className="passenger-name">Lucía Morales Castro</span>
-                </div>
-                <div className="route-info">
-                <span className="route-path">Arequipa → Lima</span>
-                <span className="route-details">Bus ABC-123 - Asiento 5B</span>
+                    <span className="date-part">{reserva.fechaIda || 'N/A'}</span>
+                    <span className="time-part">{reserva.horaIda || 'N/A'}</span>
                 </div>
                 <div className="datetime-info">
-                <span className="date-part">18 Jun 2025</span>
-                <span className="time-part">14:00</span>
+                    <span className="date-part">{reserva.fechaVuelta || 'N/A'}</span>
+                    <span className="time-part">{reserva.horaVuelta || 'N/A'}</span>
                 </div>
-                <span className="status cancelada">Cancelada</span>
-                <div className="actions">
-                <button className="action-edit">Editar</button>
-                <button className="action-view">Ver</button>
-                </div>
+                <span className={`status ${obtenerClaseEstado(reserva.estado)}`}>
+                {obtenerEstadoEnEspanol(reserva.estado)}
+                </span>
+                <span className="amount">
+                S/ {Number(reserva.monto || 0).toFixed(2)}
+                </span>
+                <span className="amount">
+                    {reserva.bus || 'N/A'}
+                </span>
+                {/* <div className="actions">
+                <button className="action-view" onClick={() => openModal('detalleReserva')}>
+                    Ver
+                </button>
+                <button className="action-edit" onClick={() => openModal('editarReserva')}>
+                    Editar
+                </button>
+                </div> */}
             </div>
+            ))
+          )}
         </div>
+
+        {/* Información adicional */}
+        {!loading && reservasFiltradas.length > 0 && (
+          <div className="table-footer">
+            <span>
+              Mostrando {reservasFiltradas.length} de {Array.isArray(reservas) ? reservas.length : 0} reservas
+            </span>
+          </div>
+        )}
       </div>
     </div>
   );
