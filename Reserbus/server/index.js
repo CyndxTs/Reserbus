@@ -1,12 +1,14 @@
 // IMPORTS
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const app = express();
 const db = require('./models');
 const sv_port = 3001;
+const cl_port = 3000;
 // MIDDLEWARE
 app.use(express.json());
-app.use(cors({ origin: 'http://localhost:3000'}));
+app.use(cors({ origin: [`http://localhost:${cl_port}`,'https://j005dq2n-3000.brs.devtunnels.ms']}));
 // ENDPOINTS
 const administradoresRouter = require('./routes/Administradores');
 app.use("/api/administradores", administradoresRouter);
@@ -42,7 +44,7 @@ const viajerosRouter = require('./routes/Viajeros');
 app.use("/api/viajeros", viajerosRouter);
 // SERVER
 db.sequelize.sync().then(() => {
-    app.listen(sv_port, () => {
-        console.log(`Running server on http://localhost:${sv_port}`);
-    });
+  app.listen(sv_port, '0.0.0.0', () => {
+    console.log(`Servidor corriendo en http://localhost:${sv_port}`);
+  });
 });

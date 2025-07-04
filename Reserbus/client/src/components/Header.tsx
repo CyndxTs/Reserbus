@@ -19,6 +19,7 @@ export interface HeaderProps {
 }
 
 const Header = ({ navOptions = [] }: HeaderProps) => {
+  const API = process.env.REACT_APP_API_URL;
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const {client,clientType,login,logout } = useClient();
@@ -42,9 +43,9 @@ const Header = ({ navOptions = [] }: HeaderProps) => {
     { setSubmitting, setFieldError, setFieldValue }: FormikHelpers<SignInValues>
   ) => {
     const endpoints = [
-      { url: '/api/viajeros/signin', clientType: 'VIAJERO' },
-      { url: '/api/empresas/signin', clientType: 'EMPRESA' },
-      { url: '/api/administradores/signin', clientType: 'ADMINISTRADOR' },
+      { url: `${API}/api/viajeros/signin`, clientType: 'VIAJERO' },
+      { url: `${API}/api/empresas/signin`, clientType: 'EMPRESA' },
+      { url: `${API}/api/administradores/signin`, clientType: 'ADMINISTRADOR' },
     ];
     try {
       for (const { url, clientType } of endpoints) {
@@ -94,7 +95,7 @@ const Header = ({ navOptions = [] }: HeaderProps) => {
     { setSubmitting, setFieldError, setFieldValue }: FormikHelpers<SignUpValues>
   ) => {
     try {
-      const response = await axios.post('/api/viajeros/signup', {
+      const response = await axios.post(`${API}/api/viajeros/signup`, {
         correo_electronico: values.email,
         contrasenia: values.password,
         nombres: values.nombres,
