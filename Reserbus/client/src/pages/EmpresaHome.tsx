@@ -1,13 +1,9 @@
-import React, { useState } from 'react';
-import './EmpresaHome.css';
-import { useClient } from '../context/ClientContext';
+import React, { useState, useEffect } from 'react';
+import './EmpresaHome.scss';
+import { useClient, Empresa } from '../context/ClientContext';
 import { useNavigate } from 'react-router-dom';
 import { formattedClientName } from '../util/ClientUtil';
 import { Formik, Form, Field, ErrorMessage } from 'formik';
-import { Bus, useBus } from '../context/BusContext';
-import ConfirmModal from '../components/ConfirmModal';
-import CreateBusModal from '../components/CreateBusModal';
-import Header from '../components/Header';
 import { 
   Reserva, 
   CreateReservaRequest, 
@@ -18,20 +14,31 @@ import {
   createViajero 
 } from '../util/ReservaUtil';
 
+// Interfaz temporal para Bus (hasta que se cree BusContext)
+interface Bus {
+  id_bus: number;
+  placa: string;
+  marca: string;
+  modelo: string;
+  numero_pisos: number;
+  capacidad_total: number;
+  esta_habilitado: boolean;
+}
+
 function EmpresaHome() {
   const { client, clientType, logout } = useClient();
   const navigate = useNavigate();
   const [activeSection, setActiveSection] = useState('dashboard');
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [modalOpen, setModalOpen] = useState<string | null>(null);
   const empresa = clientType === 'EMPRESA' ? client as Empresa : null;
   const [showBusModal, setShowBusModal] = useState(false);
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
-  const { buses, fetchBuses } = useBus();
+  // Temporal: buses como array vacío hasta implementar BusContext
+  const [buses, setBuses] = useState<Bus[]>([]);
   const [selectedBus, setSelectedBus] = useState<Bus | null>(null);
-  const { deleteBus } = useBus();
   const [busAEliminar, setBusAEliminar] = useState<Bus | null>(null);
   
   // Estados para reservas
@@ -52,8 +59,8 @@ function EmpresaHome() {
   useEffect(() => {
     console.log("Empresa cargada", empresa)
     if (empresa) {
-      fetchBuses(empresa.id_empresa);
-      console.log("Buses cargados:", buses);
+      // TODO: Implementar fetchBuses cuando se cree BusContext
+      console.log("Buses a cargar para empresa:", empresa.id_empresa);
     }
     // Cargar datos para reservas
     loadReservas();
@@ -119,10 +126,13 @@ function EmpresaHome() {
     if (!window.confirm("¿Estás seguro de eliminar este bus?")) return;
 
     try {
-      await deleteBus(id);
-      if(empresa) {
-        fetchBuses(empresa.id_empresa); // refrescar la lista
-      }
+      // TODO: Implementar deleteBus cuando se cree BusContext
+      console.log("Eliminar bus con ID:", id);
+      // await deleteBus(id);
+      // if(empresa) {
+      //   fetchBuses(empresa.id_empresa); // refrescar la lista
+      // }
+      alert("Función de eliminar bus pendiente de implementar");
     } catch (error) {
       alert("Error al eliminar el bus.");
     }
@@ -134,6 +144,12 @@ function EmpresaHome() {
     bus.marca.toLowerCase().includes(searchQuery.toLowerCase()) ||
     bus.modelo.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  // Función para cerrar sesión
+  const handleSignOut = () => {
+    logout();
+    navigate('/');
+  };
 
 
   const renderMainContent = () => {
@@ -258,7 +274,8 @@ function EmpresaHome() {
         );
         case 'buses':
         return (
-          <div className="section-content">            <div className="section-header">
+          <div className="section-content">            
+          <div className="section-header">
               <h1>Gestión de Buses</h1>
               <button className="primary-button" onClick={() => openModal('bus')}>
                 <svg viewBox="0 0 25 15" fill="currentColor">
@@ -425,7 +442,8 @@ function EmpresaHome() {
         );
         case 'viajes':
         return (
-          <div className="section-content">            <div className="section-header">
+          <div className="section-content">            
+          <div className="section-header">
               <h1>Gestión de Viajes</h1>
               <button className="primary-button" onClick={() => openModal('viaje')}>
                 <svg viewBox="0 0 25 15" fill="currentColor">
@@ -1305,6 +1323,13 @@ function EmpresaHome() {
       </main>
       
       {renderModal()}
+      
+      {/* Success Popup */}
+      {showSuccessPopup && (
+        <div className={`success-popup ${showSuccessPopup ? 'show' : ''}`}>
+          {successMessage}
+        </div>
+      )}
     </div>
   );
 }
