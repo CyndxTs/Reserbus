@@ -97,7 +97,7 @@
 }
 
 .services-label {
-  font-size: 13px;
+  font-size: 1.5rem;
   color: #555;
   font-weight: 600;
   margin: 8px 0 6px 0;
@@ -107,21 +107,22 @@
 .services-checkbox-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 8px;
+  gap: 1rem;
   max-height: 180px;
   overflow-y: auto;
   padding: 3px;
 }
 
 .checkbox-option-bus {
+  font-size: 1.1rem;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 0.5rem;
 }
 
 .checkbox-option-bus input[type="checkbox"] {
-  width: 14px;
-  height: 14px;
+  width: 20px;
+  height: 20px;
   accent-color: #4d15f0;
   cursor: pointer;
 }

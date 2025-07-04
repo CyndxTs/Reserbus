@@ -4,15 +4,40 @@ const { Viaje, Ruta, Terminal, Empresa, Tarifa } = require('../models');
 const { Op, Sequelize } = require('sequelize');
 // TEST - SELECT ALL
 router.get('/', async (req, res) => {
-    const viajes = await Viaje.findAll();
+  try {
+    const viajes = await Viaje.findAll({
+      where: { esta_habilitado: true },
+      include: [
+        {
+          model: Ruta,
+          include: [
+            {
+              model: Terminal,
+              as: 'terminalOrigen',
+              attributes: ['nombre']
+            },
+            {
+              model: Terminal,
+              as: 'terminalDestino',
+              attributes: ['nombre']
+            }
+          ]
+        }
+      ]
+    });
     res.json(viajes);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
+
 // TEST - INSERT
 router.post('/', async (req, res) => {
     const viaje = req.body;
     await Viaje.create(viaje);
     res.json(viaje);
 });// buscar viajes según parámetros
+
 router.get('/buscar', async (req, res) => {
     try {
         const { origen, destino, fecha_salida, fecha_regreso, pasajeros } = req.query;

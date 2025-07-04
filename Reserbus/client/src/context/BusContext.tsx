@@ -144,32 +144,45 @@ export const BusProvider = ({ children }: { children: ReactNode }) => {
   }
 };
 
-  const deleteBus = async (idBus: number) => {
-    setLoading(true);
-    try {
-      const response = await axios.delete(`/api/buses/${idBus}`);
+const deleteBus = async (idBus: number) => {
+  setLoading(true);
+  try {
+    const response = await axios.delete(`/api/buses/${idBus}`);
+    
+    // Opcional: refrescar lista completa
+    setBuses(prev => prev.filter(bus => bus.id_bus !== idBus));
+    setError(null);
+    return response.data;
+  } catch (err) {
+    if (axios.isAxiosError(err)) {
+      const errorData = err.response?.data;
       
-      // Opcional: refrescar lista completa
-      setBuses(prev => prev.filter(bus => bus.id_bus !== idBus));
-      setError(null);
-      return response.data;
-    } catch (err) {
-      if (axios.isAxiosError(err)) {
-        const errorData = err.response?.data;
-        if (errorData?.error === 'No se puede eliminar el bus') {
-          setError(errorData.detalle || 'Este bus está asignado a viajes con reservas activas');
-        } else {
-          setError('Error al eliminar el bus');
-        }
+      // Si es un error 400 (validación de negocio)
+      if (err.response?.status === 400 && errorData?.error) {
+        const detailMessage = errorData.detalle || errorData.error;
+        setError(detailMessage);
+        // Crear un error personalizado con la respuesta completa de Axios
+        const customError = new Error(detailMessage);
+        (customError as any).response = err.response;
+        (customError as any).isBusinessError = true;
+        throw customError;
       } else {
-        setError('Error al eliminar el bus');
+        // Para otros tipos de errores
+        const genericMessage = errorData?.error || 'Error al eliminar el bus';
+        setError(genericMessage);
+        const customError = new Error(genericMessage);
+        (customError as any).response = err.response;
+        throw customError;
       }
-      console.error(err);
-      throw err;
-    } finally {
-      setLoading(false);
+    } else {
+      const genericMessage = 'Error al eliminar el bus';
+      setError(genericMessage);
+      throw new Error(genericMessage);
     }
-  };
+  } finally {
+    setLoading(false);
+  }
+};
 
   const toggleBusStatus = async (idBus: number) => {
     setLoading(true);

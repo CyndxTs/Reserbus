@@ -1,4 +1,5 @@
 import './CreateBusModal.scss';
+import '../pages/EmpresaHome.scss'
 import { Formik, Form, Field, ErrorMessage } from 'formik';
 import { Bus, useBus } from '../context/BusContext';
 import { CreateBusSchema, cantidadPisosOptions } from '../util/BusUtil';
@@ -72,14 +73,19 @@ const CreateBusModal = ({ onClose, onSuccess, idEmpresa, busAEditar  }: CreateBu
 
 
   return (
-    <div className="modal-overlay-bus">
-      <div className="modal-content-bus">
-        <button className="close-bus-modal" onClick={onClose}>×</button>
-        <h2 className="modal-title-bus">
-          {busAEditar ? 'Editar Bus' : 'Registrar Nuevo Bus'}
-        </h2>
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <h2>{busAEditar ? 'Editar Bus' : 'Registrar Nuevo Bus'}</h2>
+          <button className="modal-close" onClick={onClose}>
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+            </svg>
+          </button>
+        </div>
         
         <Formik
+          className="modal-form"
           initialValues={initialValues}
           validationSchema={CreateBusSchema}
           onSubmit={handleSubmit}
@@ -87,10 +93,9 @@ const CreateBusModal = ({ onClose, onSuccess, idEmpresa, busAEditar  }: CreateBu
           validateOnBlur={true}
         >
           {({ values, setFieldValue, isValid }) => (
-            <Form className="bus-form">
+            <Form className="modal-form">
               <div className="compact-input-group">
-                <div className="compact-input-pair">
-                  <div className="form-group-bus">
+                  <div className="form-group">
                     <label htmlFor="placa">Placa del Bus</label>
                     <Field
                       name="placa"
@@ -107,40 +112,39 @@ const CreateBusModal = ({ onClose, onSuccess, idEmpresa, busAEditar  }: CreateBu
                       className="error-message-bus"
                     />
                   </div>
+                  <div className='form-row'>
+                    <div className="form-group">
+                      <label htmlFor="marca">Marca</label>
+                      <Field
+                        name="marca"
+                        type="text"
+                        placeholder="Ej: Volvo"
+                        className="form-control-bus compact"
+                      />
+                      <ErrorMessage
+                        name="marca"
+                        component="div"
+                        className="error-message-bus"
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label htmlFor="modelo">Modelo</label>
+                      <Field
+                        name="modelo"
+                        type="text"
+                        placeholder="Ej: 2023"
+                        className="form-control-bus compact"
+                      />
+                      <ErrorMessage
+                        name="modelo"
+                        component="div"
+                        className="error-message-bus"
+                      />
+                    </div>
+                  </div>              
 
-                  <div className="form-group-bus">
-                    <label htmlFor="marca">Marca</label>
-                    <Field
-                      name="marca"
-                      type="text"
-                      placeholder="Ej: Volvo"
-                      className="form-control-bus compact"
-                    />
-                    <ErrorMessage
-                      name="marca"
-                      component="div"
-                      className="error-message-bus"
-                    />
-                  </div>
-                </div>
-
-                <div className="compact-input-pair">
-                  <div className="form-group-bus">
-                    <label htmlFor="modelo">Modelo</label>
-                    <Field
-                      name="modelo"
-                      type="text"
-                      placeholder="Ej: 2023"
-                      className="form-control-bus compact"
-                    />
-                    <ErrorMessage
-                      name="modelo"
-                      component="div"
-                      className="error-message-bus"
-                    />
-                  </div>
-
-                  <div className="form-group-bus">
+                <div className="form-row">
+                  <div className="form-group">
                     <label htmlFor="cantidad_pisos">Pisos</label>
                     <Field
                       as="select"
@@ -159,10 +163,21 @@ const CreateBusModal = ({ onClose, onSuccess, idEmpresa, busAEditar  }: CreateBu
                       className="error-message-bus"
                     />
                   </div>
+                  <div className="form-group">
+                    <label htmlFor="asientos">Total de Asientos</label>
+                    <input 
+                      type="number" 
+                      id="asientos" 
+                      name="asientos" 
+                      min="20" 
+                      max="60" 
+                      placeholder="40" 
+                      required 
+                      />
+                  </div>
                 </div>
               </div>
-
-              <div className="form-group-bus">
+              <div className="form-group">
                 <label className="services-label">Servicios Disponibles</label>
                 <div className="services-checkbox-grid">
                   {servicios.filter(s => s.esta_habilitado).map(servicio => (
@@ -198,13 +213,12 @@ const CreateBusModal = ({ onClose, onSuccess, idEmpresa, busAEditar  }: CreateBu
                 />
               </div>
 
-              <button 
-                type="submit" 
-                className="submit-button-bus"
-                disabled={loading || !isValid}
-              >
-                {loading ? 'Guardando...' : busAEditar ? 'Guardar Cambios' : 'Registrar Bus'}
-              </button>
+              <div className="modal-actions">
+                <button type="button" className="btn-secondary" onClick={onClose}>Cancelar</button>
+                <button type="submit" className="btn-primary" disabled={loading || !isValid}>
+                  {loading ? 'Guardando...' : busAEditar ? 'Guardar Cambios' : 'Registrar Bus'}
+                </button>
+              </div>
             </Form>
           )}
         </Formik>

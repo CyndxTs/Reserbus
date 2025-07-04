@@ -3,6 +3,7 @@ import { Empresa } from '../context/ClientContext';
 import { Bus, useBus } from '../context/BusContext';
 import CreateBusModal from './CreateBusModal';
 import ConfirmModal from './ConfirmModal';
+import ErrorModal from './ErrorModal';
 
 interface BusManagementProps {
   empresa: Empresa | null;
@@ -17,6 +18,8 @@ const BusManagement: React.FC<BusManagementProps> = ({ empresa }) => {
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
   const [hasFetched, setHasFetched] = useState(false);
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   // Hooks de Context
   const { buses, fetchBuses, deleteBus } = useBus();
@@ -151,42 +154,6 @@ const BusManagement: React.FC<BusManagementProps> = ({ empresa }) => {
               </div>
             ))}
           </div>
-
-          <div className="table-row">
-            <span className="bus-plate">ABC-123</span>
-            <span>Mercedes-Benz / Sprinter</span>
-            <span>2</span>
-            <span>40</span>
-            <span className="status active">Activo</span>
-            <div className="actions">
-              <button className="action-edit">Editar</button>
-              <button className="action-view">Ver</button>
-            </div>
-          </div>
-          
-          <div className="table-row">
-            <span className="bus-plate">XYZ-456</span>
-            <span>Volvo / 9700</span>
-            <span>2</span>
-            <span>45</span>
-            <span className="status maintenance">Mantenimiento</span>
-            <div className="actions">
-              <button className="action-edit">Editar</button>
-              <button className="action-view">Ver</button>
-            </div>
-          </div>
-          
-          <div className="table-row">
-            <span className="bus-plate">DEF-789</span>
-            <span>Scania / Irizar</span>
-            <span>1</span>
-            <span>35</span>
-            <span className="status active">Activo</span>
-            <div className="actions">
-              <button className="action-edit">Editar</button>
-              <button className="action-view">Ver</button>
-            </div>
-          </div>
           
           <div className="table-row">
             <span className="bus-plate">GHI-012</span>
@@ -202,24 +169,49 @@ const BusManagement: React.FC<BusManagementProps> = ({ empresa }) => {
         </div>
       </div>
 
+      {/* Modal de Error */}
+      {showErrorModal && (
+        <ErrorModal
+          title="No se puede eliminar el bus"
+          message={errorMessage}
+          onClose={() => setShowErrorModal(false)}
+        />
+      )}
+
       {/* Confirmación de eliminación de bus */}
         {busAEliminar && (
-          <ConfirmModal
-            title="Deshabilitar Bus"
-            message={`¿Estás seguro de deshabilitar el bus ${busAEliminar.placa}?`}
-            primaryButtonText="Sí, seguro"
-            secondaryButtonText="Volver"
-            onConfirm={async () => {
+        <ConfirmModal
+          title="Deshabilitar Bus"
+          message={`¿Estás seguro de deshabilitar el bus ${busAEliminar.placa}?`}
+          primaryButtonText="Sí, seguro"
+          secondaryButtonText="Volver"
+          onConfirm={async () => {
+            try {
               await deleteBus(busAEliminar.id_bus);
               setBusAEliminar(null);
-              if (empresa){
+              if (empresa) {
                 fetchBuses(empresa.id_empresa);
                 handleSuccess('delete');
               }
-            }}
-            onCancel={() => setBusAEliminar(null)}
-          />
-        )}
+            } catch (error: any) {
+              setBusAEliminar(null);
+              
+              // Verificar si es un error de validación de negocio (400)
+              if (error.response?.status === 400 || error.isBusinessError) {
+                const errorData = error.response?.data;
+                const detailMessage = errorData?.detalle || errorData?.error || error.message;
+                setErrorMessage(detailMessage);
+              } else {
+                // Para otros errores del servidor o de red
+                setErrorMessage(error.message || "No se pudo eliminar el bus debido a un error del sistema.");
+              }
+              
+              setShowErrorModal(true);
+            }
+          }}
+          onCancel={() => setBusAEliminar(null)}
+        />
+      )}
       
       {/* Modal para crear/editar bus */}
       {(showBusModal || selectedBus) && empresa && (
