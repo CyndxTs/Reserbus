@@ -4,6 +4,19 @@ import { useClient } from '../context/ClientContext';
 import { useNavigate } from 'react-router-dom';
 import { formattedClientName } from '../util/ClientUtil';
 import { Formik, Form, Field, ErrorMessage } from 'formik';
+import { Bus, useBus } from '../context/BusContext';
+import ConfirmModal from '../components/ConfirmModal';
+import CreateBusModal from '../components/CreateBusModal';
+import Header from '../components/Header';
+import { 
+  Reserva, 
+  CreateReservaRequest, 
+  fetchReservas, 
+  createReserva, 
+  fetchViajeros, 
+  fetchViajes,
+  createViajero 
+} from '../util/ReservaUtil';
 
 function EmpresaHome() {
   const { client, clientType, logout } = useClient();
@@ -11,12 +24,21 @@ function EmpresaHome() {
   const [activeSection, setActiveSection] = useState('dashboard');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
   const [modalOpen, setModalOpen] = useState<string | null>(null);
-
-  const empresa = clientType === 'EMPRESA' ? client : null;
-  const handleSignOut = () => {
-    logout();
-    navigate('/');
-  };
+  const empresa = clientType === 'EMPRESA' ? client as Empresa : null;
+  const [showBusModal, setShowBusModal] = useState(false);
+  const [showSuccessPopup, setShowSuccessPopup] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const { buses, fetchBuses } = useBus();
+  const [selectedBus, setSelectedBus] = useState<Bus | null>(null);
+  const { deleteBus } = useBus();
+  const [busAEliminar, setBusAEliminar] = useState<Bus | null>(null);
+  
+  // Estados para reservas
+  const [reservas, setReservas] = useState<Reserva[]>([]);
+  const [loadingReservas, setLoadingReservas] = useState(false);
+  const [viajeros, setViajeros] = useState<any[]>([]);
+  const [viajes, setViajes] = useState<any[]>([]);
 
   const openModal = (modalType: string) => {
     setModalOpen(modalType);
@@ -25,6 +47,94 @@ function EmpresaHome() {
   const closeModal = () => {
     setModalOpen(null);
   };
+
+  // Cargar buses al montar el componente
+  useEffect(() => {
+    console.log("Empresa cargada", empresa)
+    if (empresa) {
+      fetchBuses(empresa.id_empresa);
+      console.log("Buses cargados:", buses);
+    }
+    // Cargar datos para reservas
+    loadReservas();
+    loadViajeros();
+    loadViajes();
+  }, [empresa]);
+
+  // Funciones para cargar datos de reservas
+  const loadReservas = async () => {
+    try {
+      setLoadingReservas(true);
+      const reservasData = await fetchReservas();
+      setReservas(reservasData);
+    } catch (error) {
+      console.error('Error al cargar reservas:', error);
+    } finally {
+      setLoadingReservas(false);
+    }
+  };
+
+  const loadViajeros = async () => {
+    try {
+      const viajerosData = await fetchViajeros();
+      setViajeros(viajerosData);
+    } catch (error) {
+      console.error('Error al cargar viajeros:', error);
+    }
+  };
+
+  const loadViajes = async () => {
+    try {
+      const viajesData = await fetchViajes();
+      setViajes(viajesData);
+    } catch (error) {
+      console.error('Error al cargar viajes:', error);
+    }
+  };
+
+  // Ocultar popup después de 3 segundos
+  useEffect(() => {
+    if (showSuccessPopup) {
+      const timer = setTimeout(() => setShowSuccessPopup(false), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [showSuccessPopup]);
+  const handleSuccess = (action: 'create' | 'update' | 'delete') => {
+    let message = "";
+    switch(action) {
+      case 'create':
+        message = "Bus creado correctamente ✅";
+        break;
+      case 'update':
+        message = "Bus actualizado correctamente ✅";
+        break;
+      case 'delete':
+        message = "Bus eliminado correctamente ✅";
+        break;
+    }
+    setSuccessMessage(message);
+    setShowSuccessPopup(true);
+  };
+  const handleEliminarBus = async (id: number) => {
+    if (!window.confirm("¿Estás seguro de eliminar este bus?")) return;
+
+    try {
+      await deleteBus(id);
+      if(empresa) {
+        fetchBuses(empresa.id_empresa); // refrescar la lista
+      }
+    } catch (error) {
+      alert("Error al eliminar el bus.");
+    }
+  };
+
+  // Filtrar información de buses (para el buscador)
+  const filteredBuses = buses.filter(bus => 
+    bus.placa.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    bus.marca.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    bus.modelo.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
 
   const renderMainContent = () => {
     switch (activeSection) {
@@ -502,150 +612,63 @@ function EmpresaHome() {
                 <input type="text" placeholder="Buscar por código de reserva, pasajero..." className="search-input" />
                 <select className="filter-select">
                   <option>Todos los estados</option>
-                  <option>Confirmada</option>
-                  <option>Pendiente</option>
-                  <option>Cancelada</option>
-                  <option>Completada</option>
+                  <option value="PAGO_PENDIENTE">Pago Pendiente</option>
+                  <option value="PAGADA">Pagada</option>
+                  <option value="COMPLETADA">Completada</option>
+                  <option value="CANCELADA">Cancelada</option>
                 </select>
                 <input type="date" className="date-filter" placeholder="Fecha" />
-                <select className="filter-select">
-                  <option>Todas las rutas</option>
-                  <option>Lima → Arequipa</option>
-                  <option>Arequipa → Cusco</option>
-                  <option>Lima → Trujillo</option>
-                  <option>Cusco → Lima</option>
-                </select>
               </div>
               
               <div className="data-table">
                 <div className="table-header">
-                  <span>DNI</span>
-                  <span>Pasajero</span>
-                  <span>Ruta</span>
-                  <span>Fecha/Hora</span>
+                  <span>ID Reserva</span>
+                  <span>Viajero</span>
+                  <span>Viaje</span>
                   <span>Estado</span>
                   <span>Acciones</span>
                 </div>
                 
-                <div className="table-row">
-                  <span className="reservation-code">12345678</span>
-                  <div className="passenger-info">
-                    <span className="passenger-name">María González López</span>
-                  </div>
-                  <div className="route-info">
-                    <span className="route-path">Lima → Arequipa</span>
-                    <span className="route-details">Bus ABC-123 - Asiento 15A</span>
-                  </div>
-                  <div className="datetime-info">
-                    <span className="date-part">20 Jun 2025</span>
-                    <span className="time-part">22:30</span>
-                  </div>
-                  <span className="status confirmada">Confirmada</span>
-                  <div className="actions">
-                    <button className="action-edit">Editar</button>
-                    <button className="action-view">Ver</button>
-                  </div>
-                </div>
-                
-                <div className="table-row">
-                  <span className="reservation-code">87654321</span>
-                  <div className="passenger-info">
-                    <span className="passenger-name">Carlos Mendoza Ruiz</span>
-                  </div>
-                  <div className="route-info">
-                    <span className="route-path">Arequipa → Cusco</span>
-                    <span className="route-details">Bus XYZ-456 - Asiento 8B</span>
-                  </div>
-                  <div className="datetime-info">
-                    <span className="date-part">21 Jun 2025</span>
-                    <span className="time-part">08:00</span>
-                  </div>
-                  <span className="status pendiente">Pendiente</span>
-                  <div className="actions">
-                    <button className="action-edit">Editar</button>
-                    <button className="action-view">Ver</button>
-                  </div>
-                </div>
-                
-                <div className="table-row">
-                  <span className="reservation-code">11223344</span>
-                  <div className="passenger-info">
-                    <span className="passenger-name">Ana Patricia Vega</span>
-                  </div>
-                  <div className="route-info">
-                    <span className="route-path">Lima → Trujillo</span>
-                    <span className="route-details">Bus DEF-789 - Asiento 12C</span>
-                  </div>
-                  <div className="datetime-info">
-                    <span className="date-part">19 Jun 2025</span>
-                    <span className="time-part">15:30</span>
-                  </div>
-                  <span className="status completada">Completada</span>
-                  <div className="actions">
-                    <button className="action-edit">Editar</button>
-                    <button className="action-view">Ver</button>
-                  </div>
-                </div>
-                
-                <div className="table-row">
-                  <span className="reservation-code">55667788</span>
-                  <div className="passenger-info">
-                    <span className="passenger-name">Roberto Silva Torres</span>
-                  </div>
-                  <div className="route-info">
-                    <span className="route-path">Cusco → Lima</span>
-                    <span className="route-details">Bus GHI-012 - Asiento 20A</span>
-                  </div>
-                  <div className="datetime-info">
-                    <span className="date-part">22 Jun 2025</span>
-                    <span className="time-part">20:00</span>
-                  </div>
-                  <span className="status confirmada">Confirmada</span>
-                  <div className="actions">
-                    <button className="action-edit">Editar</button>
-                    <button className="action-view">Ver</button>
-                  </div>
-                </div>
-                
-                <div className="table-row">
-                  <span className="reservation-code">99887766</span>
-                  <div className="passenger-info">
-                    <span className="passenger-name">Lucía Morales Castro</span>
-                  </div>
-                  <div className="route-info">
-                    <span className="route-path">Arequipa → Lima</span>
-                    <span className="route-details">Bus ABC-123 - Asiento 5B</span>
-                  </div>
-                  <div className="datetime-info">
-                    <span className="date-part">18 Jun 2025</span>
-                    <span className="time-part">14:00</span>
-                  </div>
-                  <span className="status cancelada">Cancelada</span>
-                  <div className="actions">
-                    <button className="action-edit">Editar</button>
-                    <button className="action-view">Ver</button>
-                  </div>
-                </div>
-                
-                <div className="table-row">
-                  <span className="reservation-code">44556677</span>
-                  <div className="passenger-info">
-                    <span className="passenger-name">Fernando Díaz López</span>
-                  </div>
-                  <div className="route-info">
-                    <span className="route-path">Lima → Cusco</span>
-                    <span className="route-details">Bus XYZ-456 - Asiento 18C</span>
-                  </div>
-                  <div className="datetime-info">
-                    <span className="date-part">23 Jun 2025</span>
-                    <span className="time-part">21:45</span>
-                  </div>
-                  <span className="status pendiente">Pendiente</span>
-                  <div className="actions">
-                    <button className="action-edit">Editar</button>
-                    <button className="action-view">Ver</button>
-                  </div>
-                </div>
+                {loadingReservas ? (
+                  <div className="loading-message">Cargando reservas...</div>
+                ) : reservas.length === 0 ? (
+                  <div className="no-data-message">No hay reservas disponibles</div>
+                ) : (
+                  reservas.map((reserva) => (
+                    <div className="table-row" key={reserva.id_reserva}>
+                      <span className="reservation-code">#{reserva.id_reserva}</span>
+                      <div className="passenger-info">
+                        <span className="passenger-name">
+                          {reserva.viajero ? 
+                            `${reserva.viajero.nombres} ${reserva.viajero.apellidos}` : 
+                            `Viajero ID: ${reserva.id_viajero}`
+                          }
+                        </span>
+                        {reserva.viajero?.correo_electronico && (
+                          <span className="passenger-email">{reserva.viajero.correo_electronico}</span>
+                        )}
+                      </div>
+                      <div className="route-info">
+                        <span className="route-path">
+                          {reserva.viajeIda?.ruta ? 
+                            `${reserva.viajeIda.ruta.origen} → ${reserva.viajeIda.ruta.destino}` : 
+                            `Viaje ID: ${reserva.id_viaje_ida}`
+                          }
+                        </span>
+                        {reserva.viajeIda?.bus && (
+                          <span className="route-details">Bus {reserva.viajeIda.bus.placa}</span>
+                        )}
+                      </div>
+                      <span className={`status ${reserva.estado.toLowerCase().replace('_', '-')}`}>
+                        {reserva.estado.replace('_', ' ')}
+                      </span>
+                      <div className="actions">
+                        <button className="action-edit">Editar</button>
+                        <button className="action-view">Ver</button>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           </div>
@@ -942,96 +965,86 @@ function EmpresaHome() {
               </form>
             </div>
           );        case 'reserva':
-          // Valores iniciales del formulario
-          const initialValues = {
-            viaje: '',
+          // Valores iniciales del formulario simplificado para la API
+          const initialReservaValues = {
+            id_viajero: '',
+            id_viaje_ida: '',
+            id_viaje_vuelta: '',
+            estado: 'PAGO_PENDIENTE',
+            // Datos para crear viajero si no existe
+            crear_viajero: false,
+            correo_electronico: '',
+            contrasenia: '',
             nombres: '',
             apellidos: '',
-            tipoDocumento: '',
-            numeroDocumento: '',
             telefono: '',
-            email: '',
-            asientoPreferencia: '',
-            tipoPasajero: '',
-            metodoPago: '',
-            observaciones: ''
+            fecha_nacimiento: ''
           };
 
-          // Función de validación
-          const validateReserva = (values: any) => {
+          // Función de validación simplificada
+          const validateReservaForm = (values: any) => {
             const errors: any = {};
 
-            // Validación de viaje
-            if (!values.viaje) {
-              errors.viaje = 'Debe seleccionar un viaje';
+            if (!values.id_viajero && !values.crear_viajero) {
+              errors.id_viajero = 'Debe seleccionar un viajero o crear uno nuevo';
             }
 
-            // Validación de nombres
-            if (!values.nombres) {
-              errors.nombres = 'Los nombres son obligatorios';
-            } else if (values.nombres.length < 2) {
-              errors.nombres = 'Los nombres deben tener al menos 2 caracteres';
+            if (!values.id_viaje_ida) {
+              errors.id_viaje_ida = 'Debe seleccionar un viaje';
             }
 
-            // Validación de apellidos
-            if (!values.apellidos) {
-              errors.apellidos = 'Los apellidos son obligatorios';
-            } else if (values.apellidos.length < 2) {
-              errors.apellidos = 'Los apellidos deben tener al menos 2 caracteres';
-            }
-
-            // Validación de tipo de documento
-            if (!values.tipoDocumento) {
-              errors.tipoDocumento = 'Debe seleccionar un tipo de documento';
-            }
-
-            // Validación de número de documento
-            if (!values.numeroDocumento) {
-              errors.numeroDocumento = 'El número de documento es obligatorio';
-            } else if (values.tipoDocumento === 'dni' && !/^\d{8}$/.test(values.numeroDocumento)) {
-              errors.numeroDocumento = 'El DNI debe tener 8 dígitos';
-            } else if (values.tipoDocumento === 'ce' && values.numeroDocumento.length < 8) {
-              errors.numeroDocumento = 'El carné de extranjería debe tener al menos 8 caracteres';
-            } else if (values.tipoDocumento === 'pasaporte' && values.numeroDocumento.length < 6) {
-              errors.numeroDocumento = 'El pasaporte debe tener al menos 6 caracteres';
-            }
-
-            // Validación de teléfono
-            if (!values.telefono) {
-              errors.telefono = 'El teléfono es obligatorio';
-            } else if (!/^\d{9}$/.test(values.telefono)) {
-              errors.telefono = 'El teléfono debe tener 9 dígitos';
-            }
-
-            // Validación de email
-            if (!values.email) {
-              errors.email = 'El email es obligatorio';
-            } else if (!/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i.test(values.email)) {
-              errors.email = 'Formato de email inválido';
-            }
-
-            // Validación de tipo de pasajero
-            if (!values.tipoPasajero) {
-              errors.tipoPasajero = 'Debe seleccionar el tipo de pasajero';
-            }
-
-            // Validación de método de pago
-            if (!values.metodoPago) {
-              errors.metodoPago = 'Debe seleccionar un método de pago';
+            if (values.crear_viajero) {
+              if (!values.nombres) errors.nombres = 'Los nombres son obligatorios';
+              if (!values.apellidos) errors.apellidos = 'Los apellidos son obligatorios';
+              if (!values.correo_electronico) errors.correo_electronico = 'El email es obligatorio';
+              if (!values.contrasenia) errors.contrasenia = 'La contraseña es obligatoria';
             }
 
             return errors;
           };
 
-          // Función para enviar el formulario
-          const handleSubmitReserva = (values: any, { setSubmitting }: any) => {
-            console.log('Datos de la reserva:', values);
-            // Aquí iría la lógica para enviar los datos al servidor
-            setTimeout(() => {
-              alert('Reserva creada exitosamente');
-              setSubmitting(false);
+          // Función para enviar el formulario de reserva
+          const handleSubmitReservaForm = async (values: any, { setSubmitting, setFieldError }: any) => {
+            try {
+              let viajeroId = values.id_viajero;
+
+              // Si necesita crear un viajero nuevo
+              if (values.crear_viajero) {
+                const nuevoViajero = await createViajero({
+                  correo_electronico: values.correo_electronico,
+                  contrasenia: values.contrasenia,
+                  nombres: values.nombres,
+                  apellidos: values.apellidos,
+                  telefono: values.telefono,
+                  fecha_nacimiento: values.fecha_nacimiento
+                });
+                viajeroId = nuevoViajero.id_viajero;
+              }
+
+              // Crear la reserva
+              const reservaData: CreateReservaRequest = {
+                estado: values.estado,
+                id_viajero: parseInt(viajeroId),
+                id_viaje_ida: parseInt(values.id_viaje_ida),
+                id_viaje_vuelta: values.id_viaje_vuelta ? parseInt(values.id_viaje_vuelta) : undefined,
+                esta_habilitado: true
+              };
+
+              await createReserva(reservaData);
+              
+              // Recargar las reservas
+              await loadReservas();
+              
+              // Mostrar mensaje de éxito
+              handleSuccess('create');
               closeModal();
-            }, 1000);
+              
+            } catch (error: any) {
+              console.error('Error al crear reserva:', error);
+              setFieldError('general', error.message || 'Error al crear la reserva');
+            } finally {
+              setSubmitting(false);
+            }
           };
 
           return (
@@ -1046,119 +1059,124 @@ function EmpresaHome() {
               </div>
 
               <Formik
-                initialValues={initialValues}
-                validate={validateReserva}
-                onSubmit={handleSubmitReserva}
+                initialValues={initialReservaValues}
+                validate={validateReservaForm}
+                onSubmit={handleSubmitReservaForm}
               >
-                {({ isSubmitting, errors, touched }) => (
+                {({ isSubmitting, errors, touched, values, setFieldValue }) => (
                   <Form className="modal-form">
+                    <ErrorMessage name="general" component="div" className="form-error" />
+                    
                     <div className="form-group">
-                      <label htmlFor="viaje">Viaje Disponible</label>
-                      <Field as="select" id="viaje" name="viaje">
+                      <label>
+                        <Field 
+                          type="checkbox" 
+                          name="crear_viajero"
+                          onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                            setFieldValue('crear_viajero', e.target.checked);
+                            if (e.target.checked) {
+                              setFieldValue('id_viajero', '');
+                            }
+                          }}
+                        />
+                        Crear nuevo viajero
+                      </label>
+                    </div>
+
+                    {!values.crear_viajero ? (
+                      <div className="form-group">
+                        <label htmlFor="id_viajero">Viajero Existente</label>
+                        <Field as="select" id="id_viajero" name="id_viajero">
+                          <option value="">Seleccionar viajero</option>
+                          {viajeros.map((viajero) => (
+                            <option key={viajero.id_viajero} value={viajero.id_viajero}>
+                              {viajero.nombres} {viajero.apellidos} - {viajero.correo_electronico}
+                            </option>
+                          ))}
+                        </Field>
+                        <ErrorMessage name="id_viajero" component="div" className="field-error" />
+                      </div>
+                    ) : (
+                      <div>
+                        <h3 style={{marginBottom: '1rem', color: '#1f2937'}}>Datos del Nuevo Viajero</h3>
+                        <div className="form-row">
+                          <div className="form-group">
+                            <label htmlFor="nombres">Nombres</label>
+                            <Field type="text" id="nombres" name="nombres" placeholder="Juan" />
+                            <ErrorMessage name="nombres" component="div" className="field-error" />
+                          </div>
+                          <div className="form-group">
+                            <label htmlFor="apellidos">Apellidos</label>
+                            <Field type="text" id="apellidos" name="apellidos" placeholder="Pérez" />
+                            <ErrorMessage name="apellidos" component="div" className="field-error" />
+                          </div>
+                        </div>
+                        <div className="form-row">
+                          <div className="form-group">
+                            <label htmlFor="correo_electronico">Email</label>
+                            <Field type="email" id="correo_electronico" name="correo_electronico" placeholder="juan@email.com" />
+                            <ErrorMessage name="correo_electronico" component="div" className="field-error" />
+                          </div>
+                          <div className="form-group">
+                            <label htmlFor="contrasenia">Contraseña</label>
+                            <Field type="password" id="contrasenia" name="contrasenia" placeholder="••••••••" />
+                            <ErrorMessage name="contrasenia" component="div" className="field-error" />
+                          </div>
+                        </div>
+                        <div className="form-row">
+                          <div className="form-group">
+                            <label htmlFor="telefono">Teléfono (opcional)</label>
+                            <Field type="tel" id="telefono" name="telefono" placeholder="987654321" />
+                          </div>
+                          <div className="form-group">
+                            <label htmlFor="fecha_nacimiento">Fecha de Nacimiento (opcional)</label>
+                            <Field type="date" id="fecha_nacimiento" name="fecha_nacimiento" />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="form-group">
+                      <label htmlFor="id_viaje_ida">Viaje de Ida</label>
+                      <Field as="select" id="id_viaje_ida" name="id_viaje_ida">
                         <option value="">Seleccionar viaje</option>
-                        <option value="lima-arequipa-20jun">Lima → Arequipa - 20 Jun 2025 22:30 (S/ 80.00)</option>
-                        <option value="arequipa-cusco-21jun">Arequipa → Cusco - 21 Jun 2025 08:00 (S/ 65.00)</option>
-                        <option value="lima-trujillo-22jun">Lima → Trujillo - 22 Jun 2025 15:30 (S/ 70.00)</option>
-                        <option value="cusco-lima-23jun">Cusco → Lima - 23 Jun 2025 20:00 (S/ 85.00)</option>
+                        {viajes.map((viaje) => (
+                          <option key={viaje.id_viaje} value={viaje.id_viaje}>
+                            Viaje #{viaje.id_viaje} - Estado: {viaje.estado}
+                            {viaje.instante_abordaje && ` - ${new Date(viaje.instante_abordaje).toLocaleString()}`}
+                          </option>
+                        ))}
                       </Field>
-                      <ErrorMessage name="viaje" component="div" className="field-error" />
+                      <ErrorMessage name="id_viaje_ida" component="div" className="field-error" />
                     </div>
-                    
-                    <h3 style={{marginBottom: '1rem', color: '#1f2937', fontSize: '1.1rem'}}>Datos del Pasajero</h3>
-                    
-                    <div className="form-row">
-                      <div className="form-group">
-                        <label htmlFor="nombres">Nombres</label>
-                        <Field type="text" id="nombres" name="nombres" placeholder="María Elena" />
-                        <ErrorMessage name="nombres" component="div" className="field-error" />
-                      </div>
-                      <div className="form-group">
-                        <label htmlFor="apellidos">Apellidos</label>
-                        <Field type="text" id="apellidos" name="apellidos" placeholder="González López" />
-                        <ErrorMessage name="apellidos" component="div" className="field-error" />
-                      </div>
-                    </div>
-                    
-                    <div className="form-row">
-                      <div className="form-group">
-                        <label htmlFor="tipoDocumento">Tipo de Documento</label>
-                        <Field as="select" id="tipoDocumento" name="tipoDocumento">
-                          <option value="">Seleccionar</option>
-                          <option value="dni">DNI</option>
-                          <option value="ce">Carné de Extranjería</option>
-                          <option value="pasaporte">Pasaporte</option>
-                        </Field>
-                        <ErrorMessage name="tipoDocumento" component="div" className="field-error" />
-                      </div>
-                      <div className="form-group">
-                        <label htmlFor="numeroDocumento">Número de Documento</label>
-                        <Field type="text" id="numeroDocumento" name="numeroDocumento" placeholder="12345678" />
-                        <ErrorMessage name="numeroDocumento" component="div" className="field-error" />
-                      </div>
-                    </div>
-                    
-                    <div className="form-row">
-                      <div className="form-group">
-                        <label htmlFor="telefono">Teléfono</label>
-                        <Field type="tel" id="telefono" name="telefono" placeholder="987654321" />
-                        <ErrorMessage name="telefono" component="div" className="field-error" />
-                      </div>
-                      <div className="form-group">
-                        <label htmlFor="email">Email</label>
-                        <Field type="email" id="email" name="email" placeholder="maria@email.com" />
-                        <ErrorMessage name="email" component="div" className="field-error" />
-                      </div>
-                    </div>
-                    
-                    <div className="form-row">
-                      <div className="form-group">
-                        <label htmlFor="asientoPreferencia">Preferencia de Asiento</label>
-                        <Field as="select" id="asientoPreferencia" name="asientoPreferencia">
-                          <option value="">Sin preferencia</option>
-                          <option value="ventana">Ventana</option>
-                          <option value="pasillo">Pasillo</option>
-                          <option value="primera-fila">Primera fila</option>
-                        </Field>
-                        <ErrorMessage name="asientoPreferencia" component="div" className="field-error" />
-                      </div>
-                      <div className="form-group">
-                        <label htmlFor="tipoPasajero">Tipo de Pasajero</label>
-                        <Field as="select" id="tipoPasajero" name="tipoPasajero">
-                          <option value="">Seleccionar</option>
-                          <option value="adulto">Adulto</option>
-                          <option value="niño">Niño (3-11 años)</option>
-                          <option value="estudiante">Estudiante</option>
-                          <option value="adulto-mayor">Adulto Mayor</option>
-                        </Field>
-                        <ErrorMessage name="tipoPasajero" component="div" className="field-error" />
-                      </div>
-                    </div>
-                    
+
                     <div className="form-group">
-                      <label htmlFor="metodoPago">Método de Pago</label>
-                      <Field as="select" id="metodoPago" name="metodoPago">
-                        <option value="">Seleccionar método</option>
-                        <option value="efectivo">Efectivo en terminal</option>
-                        <option value="tarjeta">Tarjeta de crédito/débito</option>
-                        <option value="transferencia">Transferencia bancaria</option>
-                        <option value="yape">Yape/Plin</option>
+                      <label htmlFor="id_viaje_vuelta">Viaje de Vuelta (opcional)</label>
+                      <Field as="select" id="id_viaje_vuelta" name="id_viaje_vuelta">
+                        <option value="">Sin viaje de vuelta</option>
+                        {viajes.map((viaje) => (
+                          <option key={viaje.id_viaje} value={viaje.id_viaje}>
+                            Viaje #{viaje.id_viaje} - Estado: {viaje.estado}
+                            {viaje.instante_abordaje && ` - ${new Date(viaje.instante_abordaje).toLocaleString()}`}
+                          </option>
+                        ))}
                       </Field>
-                      <ErrorMessage name="metodoPago" component="div" className="field-error" />
                     </div>
-                    
+
                     <div className="form-group">
-                      <label htmlFor="observaciones">Observaciones</label>
-                      <Field 
-                        as="textarea"
-                        id="observaciones" 
-                        name="observaciones" 
-                        placeholder="Información adicional, necesidades especiales, etc."
-                      />
-                      <ErrorMessage name="observaciones" component="div" className="field-error" />
+                      <label htmlFor="estado">Estado de la Reserva</label>
+                      <Field as="select" id="estado" name="estado">
+                        <option value="PAGO_PENDIENTE">Pago Pendiente</option>
+                        <option value="PAGADA">Pagada</option>
+                        <option value="COMPLETADA">Completada</option>
+                        <option value="CANCELADA">Cancelada</option>
+                      </Field>
                     </div>
                     
                     <div className="modal-actions">
-                      <button type="button" className="btn-secondary" onClick={closeModal}>Cancelar</button>
+                      <button type="button" className="btn-secondary" onClick={closeModal}>
+                        Cancelar
+                      </button>
                       <button type="submit" className="btn-primary" disabled={isSubmitting}>
                         {isSubmitting ? 'Creando...' : 'Crear Reserva'}
                       </button>
