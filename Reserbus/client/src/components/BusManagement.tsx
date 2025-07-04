@@ -124,8 +124,8 @@ const BusManagement: React.FC<BusManagementProps> = ({ empresa }) => {
             <span>Placa</span>
             <span>Marca/Modelo</span>
             <span>Pisos</span>
-            <span>Asientos</span>
             <span>Estado</span>
+           
             <span>Acciones</span>
           </div>
           
@@ -134,9 +134,10 @@ const BusManagement: React.FC<BusManagementProps> = ({ empresa }) => {
               <div key={bus.id_bus} className="table-row">
                 <span className='bus-plate'>{bus.placa}</span>
                 <span>{bus.marca} / {bus.modelo}</span>
-                <span>2</span>
-                <span>40</span>
-                <span className="status active">Activo</span>
+                <span>{bus.cantidad_pisos}</span>
+                <span className={`status ${bus.esta_habilitado ? 'active' : 'inactive'}`}>
+                  {bus.esta_habilitado ? 'Activo' : 'Inactivo'}
+                </span>
                 <div className="actions">
                   <button 
                     className="action-edit"
@@ -155,17 +156,7 @@ const BusManagement: React.FC<BusManagementProps> = ({ empresa }) => {
             ))}
           </div>
           
-          <div className="table-row">
-            <span className="bus-plate">GHI-012</span>
-            <span>Mercedes-Benz / OH1526</span>
-            <span>2</span>
-            <span>42</span>
-            <span className="status active">Activo</span>
-            <div className="actions">
-              <button className="action-edit">Editar</button>
-              <button className="action-view">Ver</button>
-            </div>
-          </div>
+          
         </div>
       </div>
 

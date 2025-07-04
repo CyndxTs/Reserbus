@@ -163,18 +163,7 @@ const CreateBusModal = ({ onClose, onSuccess, idEmpresa, busAEditar  }: CreateBu
                       className="error-message-bus"
                     />
                   </div>
-                  <div className="form-group">
-                    <label htmlFor="asientos">Total de Asientos</label>
-                    <input 
-                      type="number" 
-                      id="asientos" 
-                      name="asientos" 
-                      min="20" 
-                      max="60" 
-                      placeholder="40" 
-                      required 
-                      />
-                  </div>
+                  
                 </div>
               </div>
               <div className="form-group">
