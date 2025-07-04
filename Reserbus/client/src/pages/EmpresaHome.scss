@@ -1199,4 +1199,19 @@
   .modal-form::-webkit-scrollbar-thumb:hover {
     background: #94a3b8;
   }
+    .dashboard {
+    width: 100%;
+    max-width: 1080px;
+    margin: 0 auto;
+  }
+
+  /* Section Content Container */
+  .section-content {
+    width: 100%;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+
+  
+
 }

@@ -9,6 +9,8 @@ import AdminEditUser from './pages/AdminEditUser';
 import AdminDeleteUser from './pages/AdminDeleteUser';
 import SearchResults from './pages/SearchResults';
 import Home from './pages/Home';
+import { TarifaProvider } from './context/TarifaContext';
+import TarifaDemoForm from './components/TarifaModal';
 
 function App() {
   return (
@@ -37,7 +39,11 @@ function App() {
 function EmpresaRoutes() {
   return (
     <Routes>
-      <Route index element={<EmpresaHome />} />
+      <Route index element={
+        <TarifaProvider>
+          <EmpresaHome />
+        </TarifaProvider>
+      } />
     </Routes>
   );
 }

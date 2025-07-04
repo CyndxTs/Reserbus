@@ -3,6 +3,7 @@ const router = express.Router();
 const { Viaje, Ruta, Terminal, Empresa, Tarifa } = require('../models');
 const { Op, Sequelize } = require('sequelize');
 // TEST - SELECT ALL
+
 router.get('/', async (req, res) => {
   try {
     const viajes = await Viaje.findAll({
@@ -10,27 +11,22 @@ router.get('/', async (req, res) => {
       include: [
         {
           model: Ruta,
+          as: 'Rutum',
           include: [
-            {
-              model: Terminal,
-              as: 'terminalOrigen',
-              attributes: ['nombre']
-            },
-            {
-              model: Terminal,
-              as: 'terminalDestino',
-              attributes: ['nombre']
-            }
+            { model: Terminal, as: 'terminalOrigen' },
+            { model: Terminal, as: 'terminalDestino' }
           ]
         }
       ]
     });
+    // Log completo para ver la estructura
+    console.log('Viajes encontrados:', JSON.stringify(viajes, null, 2));
     res.json(viajes);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
+  } catch (err) {
+    console.error('Error en GET /api/viajes:', err);
+    res.status(500).json({ error: err.message });
   }
 });
-
 // TEST - INSERT
 router.post('/', async (req, res) => {
     const viaje = req.body;

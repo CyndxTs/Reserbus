@@ -7,13 +7,23 @@ import { Formik, Form, Field, ErrorMessage } from 'formik';
 import Header from '../components/Header';
 import BusManagement from '../components/BusManagement';
 import ReservationManagement from '../components/ReservationManagement';
+import TarifaModal from '../components/TarifaModal';
+import { useTarifa } from '../context/TarifaContext';
 
 function EmpresaHome() {
   const { client, clientType, logout } = useClient();
   const navigate = useNavigate();
   const [activeSection, setActiveSection] = useState('dashboard');
   const [modalOpen, setModalOpen] = useState<string | null>(null);
+  const [editingTarifa, setEditingTarifa] = useState<any>(null);
   const empresa = clientType === 'EMPRESA' ? client as Empresa : null;
+
+  // Tarifa context
+  const { tarifas, fetchTarifas, deleteTarifa } = useTarifa();
+
+  useEffect(() => {
+    if (activeSection === 'tarifas') fetchTarifas();
+  }, [activeSection, fetchTarifas]);
 
   const openModal = (modalType: string) => {
     setModalOpen(modalType);
@@ -21,6 +31,19 @@ function EmpresaHome() {
 
   const closeModal = () => {
     setModalOpen(null);
+    setEditingTarifa(null);
+  };
+
+  const handleEdit = (tarifa: any) => {
+    setEditingTarifa(tarifa);
+    setModalOpen('tarifa');
+  };
+
+  const handleDelete = async (id_tarifa: number) => {
+    if (window.confirm('¿Seguro que deseas eliminar esta tarifa?')) {
+      await deleteTarifa(id_tarifa);
+      fetchTarifas();
+    }
   };
 
   const renderMainContent = () => {
@@ -403,9 +426,73 @@ function EmpresaHome() {
 
         case 'reservas':
         return <ReservationManagement openModal={openModal} empresa={empresa} />;
-      
+
+        case 'tarifas':
+        return (
+          <div className="section-content">
+            <div className="section-header">
+              <h1>Gestión de Tarifas</h1>
+              <button className="primary-button" onClick={() => openModal('tarifa')}>
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+                </svg>
+                Nueva Tarifa
+              </button>
+            </div>
+            <div className="data-grid">
+              <div className="data-table">
+                <div className="table-header">
+                  <span>#</span>
+                  <span>Viaje</span>
+                  <span>Tipo de Asiento</span>
+                  <span>Precio</span>
+                  <span>Acciones</span>
+                </div>
+                {tarifas.length === 0 && (
+                  <div className="table-row">
+                    <span style={{ textAlign: 'center', width: '100%' }}>
+                      No hay tarifas registradas.
+                    </span>
+                  </div>
+                )}
+                {tarifas.map((tarifa, idx) => (
+                  <div className="table-row" key={tarifa.id_tarifa}>
+                    <span>{idx + 1}</span>
+                    <span>
+                      {(tarifa.Viaje?.Rutum?.terminalOrigen?.nombre || '¿?') + ' → ' + (tarifa.Viaje?.Rutum?.terminalDestino?.nombre || '¿?')}
+                    </span>
+                    <span>{tarifa.TipoDeAsiento?.nombre || '¿?'}</span>
+                    <span>S/ {tarifa.precio}</span>
+                    <div className="actions">
+                      <button
+                        className="action-edit"
+                        onClick={() => handleEdit(tarifa)}
+                      >
+                        <img src="Edit.png" alt="Editar" />
+                      </button>
+                      <button
+                        className="action-delete"
+                        onClick={() => handleDelete(tarifa.id_tarifa)}
+                      >
+                        <img src="Delete.png" alt="Eliminar" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            {modalOpen === 'tarifa' && (
+              <TarifaModal
+                onClose={closeModal}
+                onSuccess={fetchTarifas}
+                tarifaAEditar={editingTarifa}
+              />
+            )}
+          </div>
+        );
+
       default:
-        return null;    }
+        return null;   }
   };
 
   const renderModal = () => {
@@ -922,6 +1009,15 @@ function EmpresaHome() {
             </div>
           );
 
+        case 'tarifa':
+          return (
+            <TarifaModal
+              onClose={closeModal}
+              onSuccess={fetchTarifas}
+              tarifaAEditar={editingTarifa}
+            />
+          );
+
         default:
           return null;
       }
@@ -1006,6 +1102,16 @@ function EmpresaHome() {
               <path d="M21 5V4c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v1H1v2h1v.5c0 .28.22.5.5.5s.5-.22.5-.5V7h18v.5c0 .28.22.5.5.5s.5-.22.5-.5V7h1V5h-2z"/>
             </svg>
             <span className="nav-text">Reservas</span>
+          </button>
+          <button 
+            className={activeSection === 'tarifas' ? 'nav-item active' : 'nav-item'}
+            onClick={() => setActiveSection('tarifas')}
+            title="Tarifas"
+          >
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 1C5.925 1 1 5.925 1 12s4.925 11 11 11 11-4.925 11-11S18.075 1 12 1zm0 20c-4.963 0-9-4.037-9-9s4.037-9 9-9 9 4.037 9 9-4.037 9-9 9zm0-16a7 7 0 100 14 7 7 0 000-14zm1 10.93V17h-2v-2.07A4.978 4.978 0 017 12c0-1.654 1.346-3 3-3s3 1.346 3 3c0 1.302-.839 2.401-2 2.83zM12 7c-2.757 0-5 2.243-5 5 0 2.757 2.243 5 5 5s5-2.243 5-5c0-2.757-2.243-5-5-5z"/>
+            </svg>
+            <span className="nav-text">Tarifas</span>
           </button>
         </nav>
       </aside>

@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { Tarifa } = require('../models')
+const { Tarifa, Ruta, Viaje, TipoDeAsiento, Terminal }  = require('../models')
 // TEST - SELECT ALL
 // GET - Listar todas las tarifas con info de viaje y tipo de asiento
 router.get('/', async (req, res) => {
