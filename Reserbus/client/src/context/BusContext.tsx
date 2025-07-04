@@ -145,22 +145,31 @@ export const BusProvider = ({ children }: { children: ReactNode }) => {
 };
 
   const deleteBus = async (idBus: number) => {
-  setLoading(true);
-  try {
-    await axios.delete(`/api/buses/${idBus}`);
-
-    // Opcional: refrescar lista completa
-    setBuses(prev => prev.filter(bus => bus.id_bus !== idBus));
-
-    setError(null);
-  } catch (err) {
-    setError('Error al eliminar el bus');
-    console.error(err);
-    throw err;
-  } finally {
-    setLoading(false);
-  }
-};
+    setLoading(true);
+    try {
+      const response = await axios.delete(`/api/buses/${idBus}`);
+      
+      // Opcional: refrescar lista completa
+      setBuses(prev => prev.filter(bus => bus.id_bus !== idBus));
+      setError(null);
+      return response.data;
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        const errorData = err.response?.data;
+        if (errorData?.error === 'No se puede eliminar el bus') {
+          setError(errorData.detalle || 'Este bus está asignado a viajes con reservas activas');
+        } else {
+          setError('Error al eliminar el bus');
+        }
+      } else {
+        setError('Error al eliminar el bus');
+      }
+      console.error(err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const toggleBusStatus = async (idBus: number) => {
     setLoading(true);
