@@ -10,13 +10,15 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false
     },
     estado: {
-      type: DataTypes.ENUM('PENDIENTE', 'PAGADO', 'RECHAZADO'),
+      type: DataTypes.STRING,
       allowNull: false,
-      defaultValue: 'PENDIENTE'
+      defaultValue: 'PENDIENTE',
+      validate: { isIn: [['PENDIENTE', 'PAGADO', 'RECHAZADO']] }
     },
     metodo_pago: {
-      type: DataTypes.ENUM('TARJETA', 'TRANSFERENCIA'),
-      allowNull: false
+      type: DataTypes.STRING,
+      allowNull: false,
+      validate: { isIn: [['TARJETA', 'TRANSFERENCIA']] }
     },
     moneda: {
       type: DataTypes.STRING(4),
@@ -28,7 +30,7 @@ module.exports = (sequelize, DataTypes) => {
       defaultValue: true
     }
   }, {
-    tableName: 'PAGO',
+    tableName: 'pago',
     freezeTableName: true,
     timestamps: false,
     underscored: true

@@ -6,9 +6,10 @@ module.exports = (sequelize, DataTypes) => {
       autoIncrement: true
     },
     estado: {
-      type: DataTypes.ENUM('PROGRAMADO', 'EN_CURSO', 'FINALIZADO', 'RETRASADO', 'CANCELADO'),
+      type: DataTypes.STRING,
       allowNull: false,
-      defaultValue: 'PROGRAMADO'
+      defaultValue: 'PROGRAMADO',
+      validate: { isIn: [['PROGRAMADO', 'EN_CURSO', 'FINALIZADO', 'RETRASADO', 'CANCELADO']] }
     },
     instante_abordaje: {
       type: DataTypes.DATE,
@@ -34,7 +35,7 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.INTEGER,
       allowNull: false
     },
-    duracion_estimada_minutos:{
+    duracion_estimada_minutos: {
       type: DataTypes.INTEGER,
       allowNull: false,
       defaultValue: 0
@@ -45,7 +46,7 @@ module.exports = (sequelize, DataTypes) => {
       defaultValue: true
     }
   }, {
-    tableName: 'VIAJE',
+    tableName: 'viaje',
     freezeTableName: true,
     timestamps: false,
     underscored: true
@@ -73,6 +74,9 @@ module.exports = (sequelize, DataTypes) => {
       as: 'reservasVuelta'
     });
     Viaje.hasMany(models.Tarifa, {
+      foreignKey: 'id_viaje'
+    });
+    Viaje.hasMany(models.Boleto, {
       foreignKey: 'id_viaje'
     });
   };

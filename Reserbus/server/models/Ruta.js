@@ -27,7 +27,7 @@ module.exports = (sequelize, DataTypes) => {
       defaultValue: true
     }
   }, {
-    tableName: 'RUTA',
+    tableName: 'ruta',
     freezeTableName: true,
     timestamps: false,
     underscored: true

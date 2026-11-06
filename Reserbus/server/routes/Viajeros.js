@@ -1,53 +1,66 @@
 const express = require('express');
 const router = express.Router();
-const { Viajero } = require('../models')
-const bcrypt = require('bcrypt');
-// TEST - SELECT ALL
-router.get('/', async (req, res) => {
-    const viajeros = await Viajero.findAll();
-    res.json(viajeros);
+const { Viajero } = require('../models');
+const { requireAuth, requireRol } = require('../middleware/auth');
+const { crearUsuarioAuth, borrarUsuarioAuth, statusDeError } = require('../lib/supabase');
+
+// El registro público (correo/contraseña o Google) se hace en el front con
+// supabase-js; el trigger de la BD crea la fila en "viajero". No hay /signup ni /signin.
+
+// Perfil propio
+router.get('/me', requireAuth, requireRol('VIAJERO'), async (req, res) => {
+  const viajero = await Viajero.findOne({ where: { id_auth: req.auth.id } });
+  if (!viajero) return res.status(404).json({ error: 'Perfil no encontrado.' });
+  res.json(viajero);
 });
-// TEST - INSERT
-router.post('/', async (req, res) => {
-    const viajero = req.body;
-    const hashedPassword = await bcrypt.hash(viajero.contrasenia, 10);
-    viajero.contrasenia = hashedPassword;
-    await Viajero.create(viajero);
+
+router.put('/me', requireAuth, requireRol('VIAJERO'), async (req, res) => {
+  try {
+    const viajero = await Viajero.findOne({ where: { id_auth: req.auth.id } });
+    if (!viajero) return res.status(404).json({ error: 'Perfil no encontrado.' });
+    const { nombres, apellidos, telefono, fecha_nacimiento } = req.body;
+    const cambios = {};
+    if (nombres !== undefined) cambios.nombres = nombres;
+    if (apellidos !== undefined) cambios.apellidos = apellidos;
+    if (telefono !== undefined) cambios.telefono = telefono;
+    if (fecha_nacimiento !== undefined) cambios.fecha_nacimiento = fecha_nacimiento;
+    await viajero.update(cambios);
     res.json(viajero);
-});
-// SIGNUP
-router.post('/signup', async (req, res) => {
-  const { correo_electronico, contrasenia, nombres, apellidos } = req.body;
-  try {
-    const existente = await Viajero.findOne({ where: { correo_electronico } });
-    if (existente) return res.status(409).json({ error: 'Valor ya registrado.' });
-    const hashedPassword = await bcrypt.hash(contrasenia, 10);
-    const nuevoViajero = await Viajero.create({
-      correo_electronico,
-      contrasenia: hashedPassword,
-      nombres,
-      apellidos
-    });
-    const { contrasenia: _, ...viajeroSinPassword } = nuevoViajero.toJSON();
-    res.status(201).json({ viajero: viajeroSinPassword });
-  } catch (error) {
-    res.status(500).json({ error: `Error interno en el servidor.\n${err.message}` });
-  }
-});
-// SIGNIN
-router.post('/signin', async (req, res) => {
-  const { correo_electronico, contrasenia } = req.body;
-  try {
-    const viajero = await Viajero.findOne({ where: { correo_electronico } });
-    if (!viajero) return res.status(401).json({ error: 'Datos inválidos' });
-    const passwordMatch = await bcrypt.compare(contrasenia, viajero.contrasenia);
-    if (!passwordMatch) return res.status(401).json({ error: 'Datos inváldos' });
-    const { contrasenia: _, ...viajeroSinPassword } = viajero.toJSON();
-    res.status(200).json({ viajero: viajeroSinPassword });
   } catch (err) {
-    res.status(500).json({ error: `Error interno en el servidor.\n${err.message}` });
+    res.status(statusDeError(err)).json({ error: `Error al actualizar perfil.\n${err.message}` });
   }
 });
 
+// Solo ADMIN: listar
+router.get('/', requireAuth, requireRol('ADMIN'), async (req, res) => {
+  try {
+    res.json(await Viajero.findAll());
+  } catch (err) {
+    res.status(500).json({ error: `Error al obtener viajeros.\n${err.message}` });
+  }
+});
+
+// Solo ADMIN: crear viajero
+router.post('/', requireAuth, requireRol('ADMIN'), async (req, res) => {
+  const { correo_electronico, contrasenia, nombres, apellidos, telefono, fecha_nacimiento } = req.body;
+  let idAuth;
+  try {
+    idAuth = await crearUsuarioAuth({
+      correo: correo_electronico,
+      contrasenia,
+      metadata: { nombres, apellidos },
+    });
+    // La fila de viajero ya la creó el trigger; completamos datos opcionales
+    const viajero = await Viajero.findOne({ where: { id_auth: idAuth } });
+    const extras = {};
+    if (telefono !== undefined) extras.telefono = telefono;
+    if (fecha_nacimiento !== undefined) extras.fecha_nacimiento = fecha_nacimiento;
+    if (Object.keys(extras).length) await viajero.update(extras);
+    res.status(201).json(viajero);
+  } catch (err) {
+    if (idAuth) await borrarUsuarioAuth(idAuth);
+    res.status(statusDeError(err)).json({ error: `Error al crear viajero.\n${err.message}` });
+  }
+});
 
 module.exports = router;

@@ -39,7 +39,7 @@ module.exports = (sequelize, DataTypes) => {
       defaultValue: true
     }
   }, {
-    tableName: 'TERMINAL',
+    tableName: 'terminal',
     freezeTableName: true,
     timestamps: false,
     underscored: true

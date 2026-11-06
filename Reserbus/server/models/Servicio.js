@@ -20,7 +20,7 @@ module.exports = (sequelize, DataTypes) => {
       defaultValue: true
     }
   }, {
-    tableName: 'SERVICIO',
+    tableName: 'servicio',
     freezeTableName: true,
     timestamps: false,
     underscored: true

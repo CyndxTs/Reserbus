@@ -6,9 +6,15 @@ module.exports = (sequelize, DataTypes) => {
       autoIncrement: true
     },
     estado: {
-      type: DataTypes.ENUM('PAGO_PENDIENTE', 'PAGADA', 'COMPLETADA', 'CANCELADA'),
+      type: DataTypes.STRING,
       allowNull: false,
-      defaultValue: 'PAGO_PENDIENTE'
+      defaultValue: 'PAGO_PENDIENTE',
+      validate: { isIn: [['PAGO_PENDIENTE', 'PAGADA', 'COMPLETADA', 'CANCELADA']] }
+    },
+    expira_en: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      defaultValue: null
     },
     id_viajero: {
       type: DataTypes.INTEGER,
@@ -34,7 +40,7 @@ module.exports = (sequelize, DataTypes) => {
       defaultValue: true
     }
   }, {
-    tableName: 'RESERVA',
+    tableName: 'reserva',
     freezeTableName: true,
     timestamps: false,
     underscored: true

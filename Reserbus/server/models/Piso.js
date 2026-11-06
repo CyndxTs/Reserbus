@@ -24,7 +24,7 @@ module.exports = (sequelize, DataTypes) => {
       defaultValue: true
     }
   }, {
-    tableName: 'PISO',
+    tableName: 'piso',
     freezeTableName: true,
     timestamps: false,
     underscored: true

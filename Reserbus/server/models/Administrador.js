@@ -5,14 +5,15 @@ module.exports = (sequelize, DataTypes) => {
       primaryKey: true,
       autoIncrement: true
     },
+    id_auth: {
+      type: DataTypes.UUID,
+      allowNull: false,
+      unique: true
+    },
     correo_electronico: {
       type: DataTypes.STRING(120),
       allowNull: false,
       unique: true
-    },
-    contrasenia: {
-      type: DataTypes.STRING(60),
-      allowNull: false
     },
     nombres: {
       type: DataTypes.STRING(60),
@@ -22,8 +23,8 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING(60),
       allowNull: false
     },
-    foto: {
-      type: DataTypes.BLOB('medium'),
+    foto_url: {
+      type: DataTypes.TEXT,
       allowNull: true,
       defaultValue: null
     },
@@ -33,12 +34,12 @@ module.exports = (sequelize, DataTypes) => {
       defaultValue: null
     },
     esta_habilitado: {
-      type: DataTypes.TINYINT,
+      type: DataTypes.BOOLEAN,
       allowNull: false,
-      defaultValue: 1
+      defaultValue: true
     }
   }, {
-    tableName: 'ADMINISTRADOR',
+    tableName: 'administrador',
     freezeTableName: true,
     timestamps: false,
     underscored: true

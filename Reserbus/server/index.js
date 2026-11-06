@@ -2,13 +2,11 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const app = express();
 const db = require('./models');
-const sv_port = 3001;
-const cl_port = 3000;
+const app = express();
 // MIDDLEWARE
 app.use(express.json());
-app.use(cors({ origin: [`http://localhost:${cl_port}`,'https://j005dq2n-3000.brs.devtunnels.ms']}));
+app.use(cors({ origin: (process.env.CLIENT_ORIGINS || '').split(',') }));
 // ENDPOINTS
 const administradoresRouter = require('./routes/Administradores');
 app.use("/api/administradores", administradoresRouter);
@@ -42,9 +40,13 @@ const viajesRouter = require('./routes/Viajes');
 app.use("/api/viajes", viajesRouter);
 const viajerosRouter = require('./routes/Viajeros');
 app.use("/api/viajeros", viajerosRouter);
+const authRouter = require('./routes/Auth');
+app.use("/api/auth", authRouter);
 // SERVER
-db.sequelize.sync().then(() => {
-  app.listen(sv_port, '0.0.0.0', () => {
-    console.log(`Servidor corriendo en http://localhost:${sv_port}`);
+module.exports = app;
+if (require.main === module) {
+  db.sequelize.authenticate().then(() => {
+    app.listen(process.env.PORT || 3001, () =>
+      console.log('Servidor corriendo y conectado a Supabase'));
   });
-});
+}

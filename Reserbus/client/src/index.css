@@ -1,0 +1,11 @@
+/* Tailwind 4 SIN "preflight" (su reset) mientras existan archivos .scss:
+   así las pantallas aún no migradas se ven igual que antes.
+   Cuando se elimine el último .scss, reemplazar estas 3 líneas por:  @import "tailwindcss";  */
+@layer theme, base, components, utilities;
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
+
+/* Tokens de diseño: se usan como text-brand, bg-brand, border-brand, ring-brand/30 ... */
+@theme {
+  --color-brand: #4d15f0;
+}

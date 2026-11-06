@@ -9,7 +9,7 @@ module.exports = (sequelize, DataTypes) => {
       primaryKey: true
     }
   }, {
-    tableName: 'BUS_SERVICIO',
+    tableName: 'bus_servicio',
     freezeTableName: true,
     timestamps: false,
     underscored: true

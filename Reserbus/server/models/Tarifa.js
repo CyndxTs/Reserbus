@@ -6,7 +6,7 @@ module.exports = (sequelize, DataTypes) => {
       autoIncrement: true
     },
     precio: {
-      type: DataTypes.FLOAT,
+      type: DataTypes.DECIMAL(10, 2),
       allowNull: false
     },
     detalle: {
@@ -28,7 +28,7 @@ module.exports = (sequelize, DataTypes) => {
       defaultValue: true
     }
   }, {
-    tableName: 'TARIFA',
+    tableName: 'tarifa',
     freezeTableName: true,
     timestamps: false,
     underscored: true
@@ -43,7 +43,7 @@ module.exports = (sequelize, DataTypes) => {
       foreignKey: 'id_tipo_de_asiento',
       onDelete: 'CASCADE'
     });
-    Tarifa.hasMany(models.Pasajero, {
+    Tarifa.hasMany(models.Boleto, {
       foreignKey: 'id_tarifa',
       onDelete: 'RESTRICT'
     });

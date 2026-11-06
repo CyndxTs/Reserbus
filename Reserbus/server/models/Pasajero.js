@@ -6,8 +6,9 @@ module.exports = (sequelize, DataTypes) => {
       autoIncrement: true
     },
     tipo_documento: {
-      type: DataTypes.ENUM('DNI', 'PASAPORTE', 'CEDULA', 'CARNET_EXTRANJERIA', 'OTRO'),
-      allowNull: false
+      type: DataTypes.STRING,
+      allowNull: false,
+      validate: { isIn: [['DNI', 'PASAPORTE', 'CEDULA', 'CARNET_EXTRANJERIA', 'OTRO']] }
     },
     numero_documento: {
       type: DataTypes.STRING(30),
@@ -33,21 +34,13 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.INTEGER,
       allowNull: false
     },
-    id_asiento: {
-      type: DataTypes.INTEGER,
-      allowNull: false
-    },
-    id_tarifa: {
-      type: DataTypes.INTEGER,
-      allowNull: false
-    },
     esta_habilitado: {
       type: DataTypes.BOOLEAN,
       allowNull: false,
       defaultValue: true
     }
   }, {
-    tableName: 'PASAJERO',
+    tableName: 'pasajero',
     freezeTableName: true,
     timestamps: false,
     underscored: true
@@ -58,12 +51,8 @@ module.exports = (sequelize, DataTypes) => {
       foreignKey: 'id_reserva',
       onDelete: 'CASCADE'
     });
-    Pasajero.belongsTo(models.Asiento, {
-      foreignKey: 'id_asiento',
-      onDelete: 'CASCADE'
-    });
-    Pasajero.belongsTo(models.Tarifa, {
-      foreignKey: 'id_tarifa',
+    Pasajero.hasMany(models.Boleto, {
+      foreignKey: 'id_pasajero',
       onDelete: 'CASCADE'
     });
   };

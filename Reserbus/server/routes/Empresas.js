@@ -1,59 +1,65 @@
 const express = require('express');
 const router = express.Router();
-const bcrypt = require('bcrypt');
 const { Empresa, Bus, Piso, Servicio } = require('../models');
+const { requireAuth, requireRol } = require('../middleware/auth');
+const { crearUsuarioAuth, borrarUsuarioAuth, statusDeError } = require('../lib/supabase');
 
 // GET ALL BUSES BY EMPRESA
+// TODO: proteger con requireAuth + validar que :idEmpresa sea la empresa del token
 router.get('/:idEmpresa/buses', async (req, res) => {
   try {
     const buses = await Bus.findAll({
-      where: { 
+      where: {
         id_empresa: req.params.idEmpresa,
-        esta_habilitado: true  // Solo buses habilitados
+        esta_habilitado: true
       },
       include: [
-        {
-          model: Piso,
-        },
+        { model: Piso },
         {
           model: Servicio,
           as: 'servicios',
-          through: { attributes: [] } // para excluir los datos de la tabla intermedia
+          through: { attributes: [] }
         }
       ]
     });
     res.json(buses);
   } catch (error) {
-    console.error("Error al obtener buses por empresa:", error);
+    console.error('Error al obtener buses por empresa:', error);
     res.status(500).json({ error: 'Error al obtener buses' });
   }
 });
 
-// TEST - SELECT ALL
-router.get('/', async (req, res) => {
-    const empresas = await Empresa.findAll();
-    res.json(empresas);
-});
-// TEST - INSERT
-router.post('/', async (req, res) => {
-    const empresa = req.body;
-    const hashedPassword = await bcrypt.hash(empresa.contrasenia, 10);
-    empresa.contrasenia = hashedPassword;
-    await Empresa.create(empresa);
-    res.json(empresa);
-});
-// SIGNIN
-router.post('/signin', async (req, res) => {
-  const { correo_electronico, contrasenia } = req.body;
+// Solo ADMIN: listar
+router.get('/', requireAuth, requireRol('ADMIN'), async (req, res) => {
   try {
-    const empresa = await Empresa.findOne({ where: { correo_electronico } });
-    if (!empresa) return res.status(401).json({ error: 'Datos inválidos' });
-    const passwordMatch = await bcrypt.compare(contrasenia, empresa.contrasenia);
-    if (!passwordMatch) return res.status(401).json({ error: 'Datos inváldos' });
-    const { contrasenia: _, ...empresaSinPassword } = empresa.toJSON();
-    res.status(200).json({ empresa: empresaSinPassword });
+    res.json(await Empresa.findAll());
   } catch (err) {
-    res.status(500).json({ error: `Error interno en el servidor.\n${err.message}` });
+    res.status(500).json({ error: `Error al obtener empresas.\n${err.message}` });
+  }
+});
+
+// Solo ADMIN: crear empresa (usuario en Supabase Auth + fila en empresa)
+router.post('/', requireAuth, requireRol('ADMIN'), async (req, res) => {
+  const { correo_electronico, contrasenia, razon_social, ruc, descripcion, logo_url } = req.body;
+  let idAuth;
+  try {
+    idAuth = await crearUsuarioAuth({
+      correo: correo_electronico,
+      contrasenia,
+      rol: 'EMPRESA',
+    });
+    const empresa = await Empresa.create({
+      id_auth: idAuth,
+      correo_electronico,
+      razon_social,
+      ruc,
+      descripcion,
+      logo_url,
+    });
+    res.status(201).json(empresa);
+  } catch (err) {
+    if (idAuth) await borrarUsuarioAuth(idAuth);
+    res.status(statusDeError(err)).json({ error: `Error al crear empresa.\n${err.message}` });
   }
 });
 

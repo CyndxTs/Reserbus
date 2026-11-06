@@ -13,11 +13,6 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.BOOLEAN,
       allowNull: false
     },
-    estado: {
-      type: DataTypes.ENUM('DISPONIBLE', 'RESERVADO'),
-      allowNull: false,
-      defaultValue: 'DISPONIBLE'
-    },
     id_piso: {
       type: DataTypes.INTEGER,
       allowNull: false
@@ -32,7 +27,7 @@ module.exports = (sequelize, DataTypes) => {
       defaultValue: true
     }
   }, {
-    tableName: 'ASIENTO',
+    tableName: 'asiento',
     freezeTableName: true,
     timestamps: false,
     underscored: true
@@ -43,15 +38,13 @@ module.exports = (sequelize, DataTypes) => {
       foreignKey: 'id_piso',
       onDelete: 'CASCADE'
     });
-
     Asiento.belongsTo(models.TipoDeAsiento, {
       foreignKey: 'id_tipo_de_asiento',
       onDelete: 'CASCADE'
     });
-
-    Asiento.hasMany(models.Pasajero, {
+    Asiento.hasMany(models.Boleto, {
       foreignKey: 'id_asiento',
-      onDelete: 'CASCADE'
+      onDelete: 'RESTRICT'
     });
   };
 

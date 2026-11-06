@@ -5,22 +5,25 @@ module.exports = (sequelize, DataTypes) => {
       primaryKey: true,
       autoIncrement: true
     },
+    id_auth: {
+      type: DataTypes.UUID,
+      allowNull: false,
+      unique: true
+    },
     correo_electronico: {
       type: DataTypes.STRING(120),
       allowNull: false,
       unique: true
     },
-    contrasenia: {
-      type: DataTypes.STRING(60),
-      allowNull: false
-    },
     nombres: {
       type: DataTypes.STRING(60),
-      allowNull: false
+      allowNull: false,
+      defaultValue: ''
     },
     apellidos: {
       type: DataTypes.STRING(60),
-      allowNull: false
+      allowNull: false,
+      defaultValue: ''
     },
     telefono: {
       type: DataTypes.STRING(20),
@@ -32,13 +35,18 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: true,
       defaultValue: null
     },
+    avatar_url: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+      defaultValue: null
+    },
     esta_habilitado: {
       type: DataTypes.BOOLEAN,
       allowNull: false,
       defaultValue: true
     }
   }, {
-    tableName: 'VIAJERO',
+    tableName: 'viajero',
     freezeTableName: true,
     timestamps: false,
     underscored: true
