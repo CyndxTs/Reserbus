@@ -63,6 +63,7 @@ interface ClientContextType {
   sendPasswordReset: (email: string) => Promise<{ ok: boolean; error?: string }>;
   updatePassword: (password: string) => Promise<{ ok: boolean; error?: string }>;
   logout: () => Promise<void>;
+  refreshProfile: () => Promise<void>;
 }
 
 const ClientContext = createContext<ClientContextType | undefined>(undefined);
@@ -200,6 +201,16 @@ export const ClientProvider = ({ children }: { children: ReactNode }) => {
     return error ? { ok: false, error: error.message } : { ok: true };
   };
 
+  // Vuelve a pedir el perfil al server (p. ej. después de editar datos en "Mi cuenta")
+  const refreshProfile = async () => {
+    const { data } = await supabase.auth.getSession();
+    if (!data.session) return;
+    const p = await fetchPerfil(data.session.access_token);
+    cache.current = null;
+    setClient(p.client);
+    setClientType(p.clientType);
+  };
+
   const logout = async () => {
     await supabase.auth.signOut();
     setClient(null);
@@ -210,7 +221,7 @@ export const ClientProvider = ({ children }: { children: ReactNode }) => {
     <ClientContext.Provider
       value={{
         client, clientType, loading,
-        signInWithPassword, signInWithGoogle, signUp, sendPasswordReset, updatePassword, logout,
+        signInWithPassword, signInWithGoogle, signUp, sendPasswordReset, updatePassword, logout, refreshProfile,
       }}
     >
       {children}
