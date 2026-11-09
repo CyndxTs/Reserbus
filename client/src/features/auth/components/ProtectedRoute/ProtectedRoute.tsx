@@ -12,7 +12,7 @@ interface ProtectedRouteProps {
 const ProtectedRoute = ({ roles, children }: ProtectedRouteProps) => {
   const { clientType, loading } = useClient();
 
-  if (loading) return <div style={{ padding: 32, textAlign: 'center' }}>Cargando…</div>;
+  if (loading) return <div className="p-8 text-center">Cargando…</div>;
   if (!clientType || !roles.includes(clientType)) return <Navigate to="/" replace />;
   return children;
 };

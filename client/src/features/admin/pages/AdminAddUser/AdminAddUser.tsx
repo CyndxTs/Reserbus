@@ -1,10 +1,7 @@
-import "../AdminHome/AdminHome.scss";
-import "./AdminAddUser.scss";
 import { Formik, Form, Field, ErrorMessage, FormikHelpers } from "formik";
-import { useNavigate } from 'react-router-dom';
 import * as Yup from "yup";
 import axios from "axios";
-import Header from "../../../../components/layout/Header/Header";
+import AdminLayout from "../../components/AdminLayout";
 
 interface AddUserValues {
   email: string;
@@ -29,7 +26,6 @@ const AddUserSchema = Yup.object().shape({
 });
 
 function AddUser() {
-  const navigate = useNavigate();
   const handleAddUser = async (
     values: AddUserValues,
     { setSubmitting, resetForm }: FormikHelpers<AddUserValues>
@@ -61,27 +57,8 @@ function AddUser() {
   };
 
   return (
-    <div className="p-admin-home">
-      <Header
-        navOptions={[
-          { label: 'Contacto', path: '/contacto' },
-          { label: 'Acerca de nosotros', path: '/acerca-de' }
-        ]}
-      />
-      <aside className="sidebar">
-        <ul>
-          <li className="active">
-            <button onClick={ () => navigate('/admin') } >Usuarios</button>
-          </li>
-          <li>Roles</li>
-          <li>Empresas</li>
-          <li>Parámetros</li>
-          <li>Reportes</li>
-        </ul>
-      </aside>
-
-      <main className="main-content add-user">
-        <h1 className="main-title left">Añadir Usuario</h1>
+    <AdminLayout>
+        <h1 className="-mt-16 mb-10 self-start text-left text-[2rem] font-semibold">Añadir Usuario</h1>
 
         <Formik
           initialValues={{
@@ -97,31 +74,31 @@ function AddUser() {
           onSubmit={handleAddUser}
         >
           {({ isSubmitting, isValid }) => (
-            <Form className="form-card">
-              <div className="form-grid">
-                <div className="form-group">
+            <Form className="mx-auto my-8 w-full max-w-[480px] rounded-lg border border-[#ddd] bg-white p-8 shadow-[0_0_4px_rgba(0,0,0,0.05)]">
+              <div className="mb-8 grid grid-cols-2 gap-6">
+                <div className="col-span-full flex flex-col [&_label]:mb-[6px] [&_label]:font-semibold [&_:is(input,select)]:rounded-md [&_:is(input,select)]:border [&_:is(input,select)]:border-[#ccc] [&_:is(input,select)]:p-[10px] [&_:is(input,select)]:text-[0.95rem]">
                   <label>Correo Electrónico</label>
                   <Field
                     type="email"
                     name="email"
                     placeholder="Enviaremos sus tickets y detalles aquí"
                   />
-                  <ErrorMessage name="email" component="div" className="field-error" />
+                  <ErrorMessage name="email" component="div" className="mt-1 text-[0.85rem] text-red-600" />
                 </div>
 
-                <div className="form-group">
+                <div className="flex flex-col [&_label]:mb-[6px] [&_label]:font-semibold [&_:is(input,select)]:rounded-md [&_:is(input,select)]:border [&_:is(input,select)]:border-[#ccc] [&_:is(input,select)]:p-[10px] [&_:is(input,select)]:text-[0.95rem]">
                   <label>Nombres</label>
                   <Field type="text" name="nombres" placeholder="Ingrese sus nombres" />
-                  <ErrorMessage name="nombres" component="div" className="field-error" />
+                  <ErrorMessage name="nombres" component="div" className="mt-1 text-[0.85rem] text-red-600" />
                 </div>
 
-                <div className="form-group">
+                <div className="flex flex-col [&_label]:mb-[6px] [&_label]:font-semibold [&_:is(input,select)]:rounded-md [&_:is(input,select)]:border [&_:is(input,select)]:border-[#ccc] [&_:is(input,select)]:p-[10px] [&_:is(input,select)]:text-[0.95rem]">
                   <label>Apellidos</label>
                   <Field type="text" name="apellidos" placeholder="Ingrese sus apellidos" />
-                  <ErrorMessage name="apellidos" component="div" className="field-error" />
+                  <ErrorMessage name="apellidos" component="div" className="mt-1 text-[0.85rem] text-red-600" />
                 </div>
 
-                <div className="form-group">
+                <div className="flex flex-col [&_label]:mb-[6px] [&_label]:font-semibold [&_:is(input,select)]:rounded-md [&_:is(input,select)]:border [&_:is(input,select)]:border-[#ccc] [&_:is(input,select)]:p-[10px] [&_:is(input,select)]:text-[0.95rem]">
                   <label>Tipo de Usuario</label>
                   <Field as="select" name="tipo">
                     <option value="Cliente">Cliente</option>
@@ -130,25 +107,25 @@ function AddUser() {
                   </Field>
                 </div>
 
-                <div className="form-group">
+                <div className="flex flex-col [&_label]:mb-[6px] [&_label]:font-semibold [&_:is(input,select)]:rounded-md [&_:is(input,select)]:border [&_:is(input,select)]:border-[#ccc] [&_:is(input,select)]:p-[10px] [&_:is(input,select)]:text-[0.95rem]">
                   <label>Contraseña Temporal</label>
                   <Field type="password" name="password" placeholder="Ingrese su contraseña" />
-                  <ErrorMessage name="password" component="div" className="field-error" />
+                  <ErrorMessage name="password" component="div" className="mt-1 text-[0.85rem] text-red-600" />
                 </div>
 
-                <div className="form-group">
+                <div className="flex flex-col [&_label]:mb-[6px] [&_label]:font-semibold [&_:is(input,select)]:rounded-md [&_:is(input,select)]:border [&_:is(input,select)]:border-[#ccc] [&_:is(input,select)]:p-[10px] [&_:is(input,select)]:text-[0.95rem]">
                   <label>Ingrese de nuevo la Contraseña</label>
                   <Field
                     type="password"
                     name="confirmPassword"
                     placeholder="Ingrese su contraseña"
                   />
-                  <ErrorMessage name="confirmPassword" component="div" className="field-error" />
+                  <ErrorMessage name="confirmPassword" component="div" className="mt-1 text-[0.85rem] text-red-600" />
                 </div>
 
-                <div className="form-group full">
+                <div className="col-span-full flex flex-col [&_label]:mb-[6px] [&_label]:font-semibold [&_:is(input,select)]:rounded-md [&_:is(input,select)]:border [&_:is(input,select)]:border-[#ccc] [&_:is(input,select)]:p-[10px] [&_:is(input,select)]:text-[0.95rem]">
                   <label>Estado</label>
-                  <div className="radio-group">
+                  <div className="mt-2 flex gap-8">
                     <label>
                       <Field type="radio" name="estado" value="ACTIVO" /> Activo
                     </label>
@@ -160,7 +137,7 @@ function AddUser() {
               </div>
 
               <button
-                className="submit-button"
+                className="mt-4 w-full cursor-pointer rounded-lg border-0 bg-brand p-3 text-[16px] text-white disabled:cursor-not-allowed disabled:bg-[#bda8f9]"
                 type="submit"
                 disabled={isSubmitting || !isValid}
               >
@@ -169,8 +146,7 @@ function AddUser() {
             </Form>
           )}
         </Formik>
-      </main>
-    </div>
+      </AdminLayout>
   );
 }
 

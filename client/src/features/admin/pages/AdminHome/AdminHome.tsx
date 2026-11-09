@@ -1,50 +1,28 @@
-import './AdminHome.scss';
-import { useClient } from '../../../auth/ClientContext';
 import { useNavigate } from 'react-router-dom';
-import Header from '../../../../components/layout/Header/Header';
+import AdminLayout from '../../components/AdminLayout';
+
+const botonPrimario =
+  'mb-4 block w-[300px] max-w-full cursor-pointer rounded-lg border-0 bg-brand p-4 text-[1rem] text-white transition-colors duration-200 hover:bg-brand-dark';
 
 function AdminHome() {
-  const { client, clientType } = useClient();
   const navigate = useNavigate();
 
-  const admin = clientType === 'ADMINISTRADOR' ? client : null;
-
   return (
-    <div className="p-admin-home">
-      <Header
-        navOptions={[
-          { label: 'Contacto', path: '/contacto' },
-          { label: 'Acerca de nosotros', path: '/acerca-de' }
-        ]}
-      />
-      <aside className="sidebar">
-        <ul>
-          <li className="active">
-            <button onClick={ () => navigate('/admin') } >Usuarios</button>
-          </li>
-          <li>Roles</li>
-          <li>Empresas</li>
-          <li>Parámetros</li>
-          <li>Reportes</li>
-        </ul>
-      </aside>
+    <AdminLayout>
+      <h1 className="-mt-16 mb-10 self-start text-left text-[2rem] font-semibold">Gestión de Usuarios</h1>
 
-      <main className="main-content">
-        <h1 className="main-title left">Gestión de Usuarios</h1>
-
-        <div className="button-group">
-          <button className="primary-button" onClick={() => navigate('/admin/add-user')}>
-            Añadir Usuario
-          </button>
-          <button className="primary-button" onClick={() => navigate('/admin/edit-user')}>
-            Modificar Usuario
-          </button>
-          <button className="primary-button" onClick={() => navigate('/admin/delete-user')}>
-            Eliminar Usuario
-          </button>
-        </div>
-      </main>
-    </div>
+      <div className="flex flex-col items-center gap-4">
+        <button className={botonPrimario} onClick={() => navigate('/admin/add-user')}>
+          Añadir Usuario
+        </button>
+        <button className={botonPrimario} onClick={() => navigate('/admin/edit-user')}>
+          Modificar Usuario
+        </button>
+        <button className={botonPrimario} onClick={() => navigate('/admin/delete-user')}>
+          Eliminar Usuario
+        </button>
+      </div>
+    </AdminLayout>
   );
 }
 

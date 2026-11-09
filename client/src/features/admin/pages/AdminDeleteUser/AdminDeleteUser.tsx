@@ -1,9 +1,6 @@
-import "../AdminHome/AdminHome.scss";
-import "./AdminDeleteUser.scss";
 import { useEffect, useState } from "react";
-import { useNavigate } from 'react-router-dom';
 import axios from "axios";
-import Header from "../../../../components/layout/Header/Header";
+import AdminLayout from "../../components/AdminLayout";
 
 interface Usuario {
   id: number;
@@ -15,7 +12,6 @@ interface Usuario {
 }
 
 function DeleteUser() {
-  const navigate = useNavigate();
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
 
   useEffect(() => {
@@ -79,37 +75,21 @@ function DeleteUser() {
   };
 
   return (
-    <div className="p-admin-home">
-      <Header
-        navOptions={[
-          { label: 'Contacto', path: '/contacto' },
-          { label: 'Acerca de nosotros', path: '/acerca-de' }
-        ]}
-      />
+    <AdminLayout>
+        <h1 className="-mt-16 mb-4 self-start text-left text-[2rem] font-semibold">Eliminar Usuario</h1>
 
-      <aside className="sidebar">
-        <ul>
-          <li className="active">
-            <button onClick={ () => navigate('/admin') } >Usuarios</button>
-          </li>
-          <li>Roles</li>
-          <li>Empresas</li>
-          <li>Parámetros</li>
-          <li>Reportes</li>
-        </ul>
-      </aside>
-
-      <main className="main-content add-user">
-        <h1 className="main-title left">Eliminar Usuario</h1>
-
-        <div className="search-bar">
-          <input type="text" placeholder="Buscar por nombre" />
-          <button className="filter-button">Filtros</button>
+        <div className="mb-6 flex w-full items-center justify-start gap-4">
+          <input
+            className="flex-[0_0_300px] rounded-md border border-[#ccc] px-[14px] py-[10px] text-[0.95rem]"
+            type="text"
+            placeholder="Buscar por nombre"
+          />
+          <button className="cursor-pointer rounded-md border-0 bg-[#eee] px-[14px] py-[10px] text-[0.95rem]">Filtros</button>
         </div>
 
-        <div className="table-container">
-          <table className="user-table">
-            <thead>
+        <div className="w-full overflow-x-auto">
+          <table className="w-full overflow-hidden rounded-lg border-collapse bg-white text-[0.95rem]">
+            <thead className="bg-[#f8f8f8] font-bold [&_th]:border-b [&_th]:border-[#f0f0f0] [&_th]:px-4 [&_th]:py-3 [&_th]:text-left">
               <tr>
                 <th>Nombre</th>
                 <th>Tipo</th>
@@ -120,13 +100,13 @@ function DeleteUser() {
             </thead>
             <tbody>
               {usuarios.map((user) => (
-                <tr key={`${user.ruta}-${user.id}`}>
-                  <td>{user.nombre}</td>
-                  <td>{user.tipo}</td>
-                  <td>{user.fechaCreacion}</td>
-                  <td>{user.fechaRol}</td>
-                  <td className="acciones">
-                    <span className="delete-icon" onClick={() => handleDelete(user)} style={{ cursor: "pointer", color: "red" }}>
+                <tr key={`${user.ruta}-${user.id}`} className="[&:last-child_td]:border-b-0 [&_td]:border-b [&_td]:border-[#f0f0f0]">
+                  <td className="px-4 py-3 text-left">{user.nombre}</td>
+                  <td className="px-4 py-3 text-left">{user.tipo}</td>
+                  <td className="px-4 py-3 text-left">{user.fechaCreacion}</td>
+                  <td className="px-4 py-3 text-left">{user.fechaRol}</td>
+                  <td className="px-4 py-3 text-left text-[1.1rem]">
+                    <span className="cursor-pointer text-red-600 transition-opacity duration-200 hover:opacity-70" onClick={() => handleDelete(user)}>
                       🗑️
                     </span>
                   </td>
@@ -135,8 +115,7 @@ function DeleteUser() {
             </tbody>
           </table>
         </div>
-      </main>
-    </div>
+      </AdminLayout>
   );
 }
 

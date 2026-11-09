@@ -1,11 +1,34 @@
-/* Tailwind 4 SIN "preflight" (su reset) mientras existan archivos .scss:
-   así las pantallas aún no migradas se ven igual que antes.
-   Cuando se elimine el último .scss, reemplazar estas 3 líneas por:  @import "tailwindcss";  */
-@layer theme, base, components, utilities;
-@import "tailwindcss/theme.css" layer(theme);
-@import "tailwindcss/utilities.css" layer(utilities);
+/* Tailwind CSS v4 completo (con preflight). Ya no existen archivos .scss. */
+@import "tailwindcss";
 
-/* Tokens de diseño: se usan como text-brand, bg-brand, border-brand, ring-brand/30 ... */
+/* Tokens de diseño: se usan como text-brand, bg-brand, border-brand, ring-brand/30, font-code ... */
 @theme {
   --color-brand: #4d15f0;
+  --color-brand-dark: #3b0fd6;
+
+  --font-sans: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  --font-code: 'Courier New', monospace;
+
+  --animate-modal-in: modal-in 0.3s ease-out;
+  @keyframes modal-in {
+    from {
+      opacity: 0;
+      transform: scale(0.95) translateY(-20px);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+    }
+  }
+}
+
+@layer base {
+  /* Tailwind usa line-height 1.5 por defecto; se conserva el "normal" que tenía el diseño original */
+  html {
+    line-height: normal;
+  }
+  body {
+    background-color: #fff;
+    color: #000;
+  }
 }

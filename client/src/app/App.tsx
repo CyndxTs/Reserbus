@@ -1,4 +1,3 @@
-import './App.scss';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import { ClientProvider } from '../features/auth/ClientContext';
 import { BusProvider } from '../features/company/BusContext';
@@ -14,7 +13,7 @@ import Home from '../features/search/pages/Home/Home';
 
 function App() {
   return (
-    <div className="App">
+    <div className="text-center">
       <ClientProvider>
         <Router>
           <Routes>

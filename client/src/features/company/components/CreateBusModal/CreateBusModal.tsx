@@ -1,4 +1,3 @@
-import './CreateBusModal.scss';
 import { Formik, Form, Field, ErrorMessage } from 'formik';
 import { Bus, useBus } from '../../BusContext';
 import { CreateBusSchema, cantidadPisosOptions } from '../../utils/BusUtil';
@@ -72,10 +71,10 @@ const CreateBusModal = ({ onClose, onSuccess, idEmpresa, busAEditar  }: CreateBu
 
 
   return (
-    <div className="modal-overlay-bus">
-      <div className="modal-content-bus">
-        <button className="close-bus-modal" onClick={onClose}>×</button>
-        <h2 className="modal-title-bus">
+    <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/60">
+      <div className="relative max-h-[90vh] w-[450px] max-w-[90%] overflow-y-auto rounded-lg bg-white p-5 shadow-[0_2px_10px_rgba(0,0,0,0.1)]">
+        <button className="absolute right-[10px] top-[10px] cursor-pointer rounded-md border-0 bg-transparent px-2 py-1 text-[28px] text-[#333] transition-all duration-200 hover:scale-110 hover:bg-brand hover:text-white" onClick={onClose}>×</button>
+        <h2 className="my-[15px] text-center text-[18px] font-bold text-[#333]">
           {busAEditar ? 'Editar Bus' : 'Registrar Nuevo Bus'}
         </h2>
         
@@ -87,16 +86,16 @@ const CreateBusModal = ({ onClose, onSuccess, idEmpresa, busAEditar  }: CreateBu
           validateOnBlur={true}
         >
           {({ values, setFieldValue, isValid }) => (
-            <Form className="bus-form">
-              <div className="compact-input-group">
-                <div className="compact-input-pair">
-                  <div className="form-group-bus">
-                    <label htmlFor="placa">Placa del Bus</label>
+            <Form className="flex flex-col gap-3">
+              <div>
+                <div className="flex w-full gap-[10px]">
+                  <div className="flex flex-1 flex-col">
+                    <label htmlFor="placa" className="mb-1 block text-[13px] font-semibold text-[#555]">Placa del Bus</label>
                     <Field
                       name="placa"
                       type="text"
                       placeholder="Ej: ABC-123"
-                      className="form-control-bus compact"
+                      className="box-border w-full rounded-[4px] border border-[#ddd] px-[10px] py-2 text-[13px] focus:border-brand focus:outline-none"
                       onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                         setFieldValue("placa", e.target.value.toUpperCase())
                       }
@@ -104,48 +103,48 @@ const CreateBusModal = ({ onClose, onSuccess, idEmpresa, busAEditar  }: CreateBu
                     <ErrorMessage
                       name="placa"
                       component="div"
-                      className="error-message-bus"
+                      className="mt-[2px] text-[11px] text-[#e74c3c]"
                     />
                   </div>
 
-                  <div className="form-group-bus">
-                    <label htmlFor="marca">Marca</label>
+                  <div className="flex flex-1 flex-col">
+                    <label htmlFor="marca" className="mb-1 block text-[13px] font-semibold text-[#555]">Marca</label>
                     <Field
                       name="marca"
                       type="text"
                       placeholder="Ej: Volvo"
-                      className="form-control-bus compact"
+                      className="box-border w-full rounded-[4px] border border-[#ddd] px-[10px] py-2 text-[13px] focus:border-brand focus:outline-none"
                     />
                     <ErrorMessage
                       name="marca"
                       component="div"
-                      className="error-message-bus"
+                      className="mt-[2px] text-[11px] text-[#e74c3c]"
                     />
                   </div>
                 </div>
 
-                <div className="compact-input-pair">
-                  <div className="form-group-bus">
-                    <label htmlFor="modelo">Modelo</label>
+                <div className="flex w-full gap-[10px]">
+                  <div className="flex flex-1 flex-col">
+                    <label htmlFor="modelo" className="mb-1 block text-[13px] font-semibold text-[#555]">Modelo</label>
                     <Field
                       name="modelo"
                       type="text"
                       placeholder="Ej: 2023"
-                      className="form-control-bus compact"
+                      className="box-border w-full rounded-[4px] border border-[#ddd] px-[10px] py-2 text-[13px] focus:border-brand focus:outline-none"
                     />
                     <ErrorMessage
                       name="modelo"
                       component="div"
-                      className="error-message-bus"
+                      className="mt-[2px] text-[11px] text-[#e74c3c]"
                     />
                   </div>
 
-                  <div className="form-group-bus">
-                    <label htmlFor="cantidad_pisos">Pisos</label>
+                  <div className="flex flex-1 flex-col">
+                    <label htmlFor="cantidad_pisos" className="mb-1 block text-[13px] font-semibold text-[#555]">Pisos</label>
                     <Field
                       as="select"
                       name="cantidad_pisos"
-                      className="form-control-bus compact"
+                      className="box-border w-full rounded-[4px] border border-[#ddd] px-[10px] py-2 text-[13px] focus:border-brand focus:outline-none"
                     >
                       {cantidadPisosOptions.map(option => (
                         <option key={option.value} value={option.value}>
@@ -156,19 +155,20 @@ const CreateBusModal = ({ onClose, onSuccess, idEmpresa, busAEditar  }: CreateBu
                     <ErrorMessage
                       name="cantidad_pisos"
                       component="div"
-                      className="error-message-bus"
+                      className="mt-[2px] text-[11px] text-[#e74c3c]"
                     />
                   </div>
                 </div>
               </div>
 
-              <div className="form-group-bus">
-                <label className="services-label">Servicios Disponibles</label>
-                <div className="services-checkbox-grid">
+              <div className="flex flex-1 flex-col">
+                <label className="mb-[6px] mt-2 block text-[13px] font-semibold text-[#555]">Servicios Disponibles</label>
+                <div className="grid max-h-[180px] grid-cols-2 gap-2 overflow-y-auto p-[3px]">
                   {servicios.filter(s => s.esta_habilitado).map(servicio => (
-                    <div key={servicio.id_servicio} className="checkbox-option-bus">
+                    <div key={servicio.id_servicio} className="flex items-center gap-[6px]">
                       <input
                         type="checkbox"
+                        className="h-[14px] w-[14px] cursor-pointer accent-brand"
                         id={`servicio-${servicio.id_servicio}`}
                         checked={values.servicios.includes(servicio.id_servicio)}
                         onChange={(e) => {
@@ -185,7 +185,7 @@ const CreateBusModal = ({ onClose, onSuccess, idEmpresa, busAEditar  }: CreateBu
                           }
                         }}
                       />
-                      <label htmlFor={`servicio-${servicio.id_servicio}`}>
+                      <label htmlFor={`servicio-${servicio.id_servicio}`} className="mb-1 block cursor-pointer text-[12px] font-semibold text-[#333]">
                         {servicio.nombre}
                       </label>
                     </div>
@@ -194,13 +194,13 @@ const CreateBusModal = ({ onClose, onSuccess, idEmpresa, busAEditar  }: CreateBu
                 <ErrorMessage
                   name="servicios"
                   component="div"
-                  className="error-message-bus"
+                  className="mt-[2px] text-[11px] text-[#e74c3c]"
                 />
               </div>
 
               <button 
                 type="submit" 
-                className="submit-button-bus"
+                className="mt-3 h-[34px] cursor-pointer rounded-[4px] border-0 bg-brand p-2 text-[13px] font-semibold text-white enabled:hover:bg-[#3a10c0] disabled:cursor-not-allowed disabled:bg-[#bda8f9]"
                 disabled={loading || !isValid}
               >
                 {loading ? 'Guardando...' : busAEditar ? 'Guardar Cambios' : 'Registrar Bus'}
