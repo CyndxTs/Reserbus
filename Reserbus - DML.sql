@@ -1,427 +1,562 @@
--- =====================================================================
--- RESERBUS — datos de prueba para Supabase (PostgreSQL)
--- Ejecutar DESPUÉS de reserbus_supabase.sql, en el SQL Editor.
---
---  * Es re-ejecutable: borra los datos de las tablas del sistema y los
---    usuarios "seed" de Auth antes de volver a cargarlos.
---  * Crea los usuarios en auth.users (63). SOLO estos 3 pueden iniciar
---    sesión (contraseña 12345678); el resto tiene una clave aleatoria
---    que nadie conoce:
---        viajero@example.com | empresa@example.com | administrador@example.com
---  * NO toca administradores que hayas creado tú (script crear-admin.js).
---  * OJO: borra viajeros y empresas existentes (también los registrados
---    por Google). Úsalo en una BD de desarrollo.
--- =====================================================================
 BEGIN;
 
--- ---------- 0. LIMPIEZA ----------
-TRUNCATE boleto, pasajero, reserva, pago, tarifa, viaje, ruta, terminal,
-         bus_servicio, asiento, piso, bus, servicio, tipo_de_asiento,
-         empresa, viajero
-  RESTART IDENTITY CASCADE;
-DELETE FROM auth.users WHERE raw_app_meta_data->>'seed' = 'true';
+-- La generación automática al insertar frecuencias se apaga: los viajes se generan
+-- explícitamente más abajo con un rango de fechas fijo (sp_generar_viajes).
+SELECT set_config('reserbus.generar_auto', 'off', true);
 
--- ---------- 1. USUARIOS: datos de origen ----------
-CREATE TEMP TABLE seed_admin (n INT, correo TEXT, nombres TEXT, apellidos TEXT, fecha_nacimiento DATE);
-INSERT INTO seed_admin VALUES
-(1,'malomireia@yahoo.com','Felipa','Mulet Batlle',NULL),
-(2,'vcifuentes@naranjo.com','Emiliano','Lobo Carnero',NULL),
-(3,'amparosantamaria@gmail.com','Nicolás','Cisneros',NULL),
-(4,'marinpaulino@hierro.org','Primitiva','Alemany',NULL),
-(5,'baenamacarena@hotmail.com','Bernardino Rodolfo','Mena Ruiz',NULL),
-(6,'solivares@baron-aliaga.com','Georgina','Vives',NULL),
-(7,'verdugoarcelia@valcarcel-perera.org','Agustín','Dalmau Isern',NULL),
-(8,'arseniojauregui@jara-sanabria.es','Edgardo Fidel','Báez Briones',NULL),
-(9,'xpascual@gmail.com','Raúl','Quintero Cisneros',NULL),
-(10,'roldansalud@gmail.com','Melisa','Quiroga Ávila',NULL),
-(11,'dafnealmeida@torrents.net','Serafina','Lledó Naranjo',NULL),
-(12,'guiomargisbert@gargallo-tirado.es','Nicolasa','Fiol Belda',NULL),
-(13,'buenoamparo@yahoo.com','Bibiana','de Bayón',NULL),
-(14,'amador19@yahoo.com','Juan','Terrón Casanova',NULL),
-(15,'scardenas@hotmail.com','Leyre','Garay Escrivá',NULL),
-(16,'csuarez@pablo.es','Encarnación','Gonzalez Santos',NULL),
-(17,'ibanroda@hotmail.com','Sergio','Quirós',NULL),
-(18,'amaya10@cobo.com','Faustino','Barros',NULL),
-(19,'martinnadia@yahoo.com','Aníbal Jaume','Gimenez',NULL),
-(20,'ebayon@hotmail.com','Cándido','Torrecilla Valencia',NULL),
-(21,'administrador@example.com','Angel','Cruz Ramirez','2001-06-12');
+-- ---------------------------------------------------------------------
+-- 0. LIMPIEZA de usuarios de prueba previos (tras re-ejecutar el DDL las tablas están vacías)
+-- ---------------------------------------------------------------------
+DELETE FROM auth.users
+ WHERE email IN ('viajero@example.com', 'empresa@example.com', 'administrador@example.com');
 
-CREATE TEMP TABLE seed_empresa (n INT, correo TEXT, razon_social TEXT, ruc TEXT, descripcion TEXT);
-INSERT INTO seed_empresa VALUES
-(1,'eroca@lopez-iniesta.es','Roda PLC','51655431894','Profound methodical methodology'),
-(2,'rocamoranacho@yahoo.com','Vergara-Montoya','61884306140','Integrated 4thgeneration utilization'),
-(3,'cloemir@haro.es','Doménech-Mata','51900473271','Phased national moratorium'),
-(4,'franciscopepita@hotmail.com','Vigil-Galindo','52664148083','Upgradable mobile projection'),
-(5,'jose-manuel38@morcillo-becerra.com','Gonzalo-Ramis','8622500353','Inverse even-keeled array'),
-(6,'romulo79@carbajo.es','Abascal Ltd','4824570611','Advanced optimal process improvement'),
-(7,'carlos43@yahoo.com','Morillo-Rocha','49442264449','Re-contextualized mission-critical framework'),
-(8,'benitezyago@herranz.com','Sabater Ltd','45796169036','Intuitive 4thgeneration complexity'),
-(9,'patinofeliciano@yahoo.com','Ayuso and Sons','37235174578','Sharable eco-centric capability'),
-(10,'vsuarez@cabezas-vall.es','Plana LLC','28054833682','Quality-focused regional framework'),
-(11,'edelmiroballesteros@hotmail.com','Herrera Ltd','90974693426','Automated object-oriented forecast'),
-(12,'kterron@velasco.net','Garay-Arco','85951965846','Public-key tangible workforce'),
-(13,'piarocha@hotmail.com','Carrión-Nogués','26409728118','Realigned intangible definition'),
-(14,'carmelita54@yahoo.com','Sanjuan-Roig','1621443310','Advanced optimal attitude'),
-(15,'huria@aparicio-robledo.es','Borrell, Iglesia and Maza','97697496700','Reverse-engineered impactful hub'),
-(16,'feliciamacias@gmail.com','Seco, Gilabert and Cabanillas','8003304981','Self-enabling web-enabled matrices'),
-(17,'veronica14@ramirez-pelayo.es','Paredes-Bernad','28996882017','Profound user-facing orchestration'),
-(18,'jose-mari16@hotmail.com','Bayón and Sons','11967606780','Vision-oriented dedicated algorithm'),
-(19,'rocamorasaturnina@yahoo.com','Peralta, Martinez and Sala','91188989185','Advanced fresh-thinking knowledge user'),
-(20,'vicentasalinas@albero.es','Puga-Mora','24257701941','Multi-channeled reciprocal intranet'),
-(21,'empresa@example.com','Empresa S.A.C.','20100070970','abcde');
+-- ---------------------------------------------------------------------
+-- 1. CATÁLOGO DE DÍAS (ISO: 1 = Lunes ... 7 = Domingo)
+-- ---------------------------------------------------------------------
+INSERT INTO dia_semana (id_dia, nombre, abreviatura) VALUES
+  (1, 'Lunes',     'LUN'),
+  (2, 'Martes',    'MAR'),
+  (3, 'Miércoles', 'MIE'),
+  (4, 'Jueves',    'JUE'),
+  (5, 'Viernes',   'VIE'),
+  (6, 'Sábado',    'SAB'),
+  (7, 'Domingo',   'DOM');
 
-CREATE TEMP TABLE seed_viajero (n INT, correo TEXT, nombres TEXT, apellidos TEXT, telefono TEXT, fecha_nacimiento DATE);
-INSERT INTO seed_viajero VALUES
-(1,'haguirre@palma.org','Rocío','Murillo Vara','+34746 014 967',NULL),
-(2,'paz02@colom.es','Jordi Gonzalo','Cuesta Anglada','+34912 98 20 78',NULL),
-(3,'isauracarmona@terron.com','Ricardo Matías','Abellán Pedrosa','+34 735 96 39 97',NULL),
-(4,'vegaloreto@acuna.es','Ulises','Pedrero Abellán','+34734 825 063',NULL),
-(5,'otorrens@yahoo.com','Lorenzo','Porras Jover','+34 748 48 40 75',NULL),
-(6,'lbermudez@canizares.es','Andrés Felipe','Viñas Rosselló','+34919 99 57 82',NULL),
-(7,'amarilis34@baro.com','Isabel','Girona Ribas','+34949584087',NULL),
-(8,'jpeiro@yahoo.com','Azucena','Macias Girón','+34 747 41 95 88',NULL),
-(9,'manola63@goni.es','Raúl','Benigno Criado Cases','+34713 448 951',NULL),
-(10,'encarnacion46@elorza-diaz.org','Elpidio Franco','Sarabia','+34 935 81 40 53',NULL),
-(11,'mreal@olivera.es','Daniel','Bilbao Guardia','+34739 64 91 93',NULL),
-(12,'julie69@yahoo.com','Caridad','Cano Cantón','+34 727 240 312',NULL),
-(13,'gracianogoni@nebot-barba.com','Vera','Llorens Sedano','+34604 418 271',NULL),
-(14,'custodiafiguerola@sandoval.com','Elodia','Mateos','+34979 18 44 99',NULL),
-(15,'vidal95@ramirez.com','Adolfo','Mendizábal Murcia','+34 736 32 35 40',NULL),
-(16,'brobles@yahoo.com','Melchor','Cózar','+34665 053 123',NULL),
-(17,'ciriaco46@gmail.com','Narcisa','Vicens Cortes','+34 730 67 08 35',NULL),
-(18,'primitivo50@vera-gaya.com','Cesar','Serra','+34 985 60 43 63',NULL),
-(19,'panfilosobrino@aguila.com','Agustina','Álvarez Martínez','+34891865083',NULL),
-(20,'tmartin@molins.com','Tristán','Álamo Ruiz','+34 723958732',NULL),
-(21,'viajero@example.com','Luisito','Comunica','+51 123456789','1998-04-27');
+-- ---------------------------------------------------------------------
+-- 2. GEOGRAFÍA: países, desfases horarios, provincias
+-- ---------------------------------------------------------------------
+INSERT INTO pais (codigo_iso, nombre, codigo_moneda, prefijo_telefono) VALUES
+  ('PE', 'Perú',    'PEN', '+51'),
+  ('CL', 'Chile',   'CLP', '+56'),
+  ('BO', 'Bolivia', 'BOB', '+591');
 
--- ---------- 2. USUARIOS EN SUPABASE AUTH ----------
-CREATE TEMP TABLE seed_auth AS
-  SELECT n, correo, 'ADMIN'::TEXT AS rol, gen_random_uuid() AS id,
-         jsonb_build_object('nombres', nombres, 'apellidos', apellidos) AS meta
-    FROM seed_admin
-  UNION ALL
-  SELECT n, correo, 'EMPRESA', gen_random_uuid(), '{}'::JSONB FROM seed_empresa
-  UNION ALL
-  SELECT n, correo, 'VIAJERO', gen_random_uuid(),
-         jsonb_build_object('nombres', nombres, 'apellidos', apellidos)
-    FROM seed_viajero;
+-- inicio = fin  -> vale todo el año (Perú y Bolivia no tienen horario de verano).
+-- Chile: verano UTC-3 (desde el 1.er domingo de septiembre) e invierno UTC-4 (desde el 1.er
+-- domingo de abril). Las fechas del DDL son fijas por año, por eso se usan 6/sep y 5/abr (aprox.).
+INSERT INTO desfase_horario (id_pais, descripcion, minutos_desfase,
+                             mes_inicio, dia_inicio, hora_inicio, mes_fin, dia_fin, hora_fin)
+SELECT p.id_pais, v.descripcion, v.minutos, v.mi, v.di, v.hi::time, v.mf, v.df, v.hf::time
+FROM (VALUES
+  ('PE', 'Perú (UTC-5, todo el año)',          -300, 1, 1, '00:00', 1, 1, '00:00'),
+  ('BO', 'Bolivia (UTC-4, todo el año)',       -240, 1, 1, '00:00', 1, 1, '00:00'),
+  ('CL', 'Chile - horario de verano (UTC-3)',  -180, 9, 6, '00:00', 4, 5, '00:00'),
+  ('CL', 'Chile - horario de invierno (UTC-4)',-240, 4, 5, '00:00', 9, 6, '00:00')
+) AS v(iso, descripcion, minutos, mi, di, hi, mf, df, hf)
+JOIN pais p ON p.codigo_iso = v.iso;
 
--- Los viajeros NO llevan "rol": así el trigger on_auth_user_created crea su fila en "viajero".
-INSERT INTO auth.users (
-  instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
-  raw_app_meta_data, raw_user_meta_data, created_at, updated_at,
-  confirmation_token, recovery_token, email_change_token_new, email_change,
-  email_change_token_current, phone_change, phone_change_token, reauthentication_token
-)
-SELECT
-  '00000000-0000-0000-0000-000000000000', s.id, 'authenticated', 'authenticated', s.correo,
-  extensions.crypt(
-    CASE WHEN s.correo IN ('viajero@example.com','empresa@example.com','administrador@example.com')
-         THEN '12345678' ELSE gen_random_uuid()::TEXT END,
-    extensions.gen_salt('bf')),
-  now(),
-  jsonb_build_object('provider','email','providers',jsonb_build_array('email'),'seed','true')
-    || CASE WHEN s.rol = 'VIAJERO' THEN '{}'::JSONB ELSE jsonb_build_object('rol', s.rol) END,
-  s.meta, now(), now(),
-  '', '', '', '', '', '', '', ''
-FROM seed_auth s
-ORDER BY s.rol, s.n;
+INSERT INTO provincia (id_pais, nombre)
+SELECT p.id_pais, v.nombre
+FROM (VALUES
+  ('PE', 'Lima'), ('PE', 'Ica'), ('PE', 'Nazca'), ('PE', 'Arequipa'),
+  ('PE', 'Moquegua'), ('PE', 'Tacna'), ('PE', 'Cusco'), ('PE', 'Puno'),
+  ('CL', 'Arica'),
+  ('BO', 'La Paz')
+) AS v(iso, nombre)
+JOIN pais p ON p.codigo_iso = v.iso;
 
-INSERT INTO auth.identities (id, user_id, provider_id, identity_data, provider, last_sign_in_at, created_at, updated_at)
-SELECT gen_random_uuid(), s.id, s.id::TEXT,
-       jsonb_build_object('sub', s.id::TEXT, 'email', s.correo, 'email_verified', true, 'phone_verified', false),
+-- ---------------------------------------------------------------------
+-- 3. USUARIOS (auth.users + auth.identities + tablas de negocio)
+--    Contraseña 12345678 (hash bcrypt con pgcrypto del esquema "extensions").
+--    El viajero lo crea el trigger on_auth_user_created; empresa y administrador
+--    llevan app_metadata.rol distinto de VIAJERO y se insertan a mano.
+-- ---------------------------------------------------------------------
+INSERT INTO auth.users
+  (instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
+   raw_app_meta_data, raw_user_meta_data, created_at, updated_at,
+   confirmation_token, recovery_token, email_change, email_change_token_new)
+VALUES
+  ('00000000-0000-0000-0000-000000000000', 'aaaaaaaa-0000-4000-8000-000000000001',
+   'authenticated', 'authenticated', 'administrador@example.com',
+   extensions.crypt('12345678', extensions.gen_salt('bf')), now(),
+   '{"provider":"email","providers":["email"],"rol":"ADMIN"}'::jsonb,
+   '{"nombres":"Administrador","apellidos":"General"}'::jsonb,
+   now(), now(), '', '', '', ''),
+  ('00000000-0000-0000-0000-000000000000', 'bbbbbbbb-0000-4000-8000-000000000002',
+   'authenticated', 'authenticated', 'empresa@example.com',
+   extensions.crypt('12345678', extensions.gen_salt('bf')), now(),
+   '{"provider":"email","providers":["email"],"rol":"EMPRESA"}'::jsonb,
+   '{"razon_social":"Transportes Pacífico Sur S.A.C."}'::jsonb,
+   now(), now(), '', '', '', ''),
+  ('00000000-0000-0000-0000-000000000000', 'cccccccc-0000-4000-8000-000000000003',
+   'authenticated', 'authenticated', 'viajero@example.com',
+   extensions.crypt('12345678', extensions.gen_salt('bf')), now(),
+   '{"provider":"email","providers":["email"],"rol":"VIAJERO"}'::jsonb,
+   '{"nombres":"Andrea","apellidos":"Torres Salazar"}'::jsonb,
+   now(), now(), '', '', '', '');
+
+INSERT INTO auth.identities (id, provider_id, user_id, identity_data, provider,
+                             last_sign_in_at, created_at, updated_at)
+SELECT gen_random_uuid(), u.id::text, u.id,
+       jsonb_build_object('sub', u.id::text, 'email', u.email,
+                          'email_verified', true, 'phone_verified', false),
        'email', now(), now(), now()
-FROM seed_auth s;
+FROM auth.users u
+WHERE u.email IN ('viajero@example.com', 'empresa@example.com', 'administrador@example.com');
 
--- ---------- 3. FILAS DE NEGOCIO LIGADAS A LOS USUARIOS ----------
 INSERT INTO administrador (id_auth, correo_electronico, nombres, apellidos, fecha_nacimiento)
-SELECT a.id, d.correo, d.nombres, d.apellidos, d.fecha_nacimiento
-FROM seed_admin d JOIN seed_auth a ON a.correo = d.correo
-ORDER BY d.n;
+VALUES ('aaaaaaaa-0000-4000-8000-000000000001', 'administrador@example.com',
+        'Administrador', 'General', DATE '1985-03-20');
 
-INSERT INTO empresa (id_auth, correo_electronico, razon_social, ruc, descripcion)
-SELECT a.id, d.correo, d.razon_social, d.ruc, d.descripcion
-FROM seed_empresa d JOIN seed_auth a ON a.correo = d.correo
-ORDER BY d.n;
+INSERT INTO empresa (id_auth, correo_electronico, razon_social, ruc, descripcion, telefono,
+                     sitio_web, id_administrador)
+VALUES ('bbbbbbbb-0000-4000-8000-000000000002', 'empresa@example.com',
+        'Transportes Pacífico Sur S.A.C.', '20601234567',
+        'Transporte interprovincial de pasajeros en el sur del Perú y rutas internacionales',
+        '014445566', 'https://www.pacificosur.example.com',
+        (SELECT id_administrador FROM administrador WHERE correo_electronico = 'administrador@example.com'));
 
--- La fila de viajero ya la creó el trigger (nombres y apellidos salen del metadata); completamos el resto
-UPDATE viajero v
-   SET telefono = d.telefono, fecha_nacimiento = d.fecha_nacimiento
-  FROM seed_viajero d
- WHERE v.correo_electronico = d.correo;
+-- La fila del viajero ya existe (la creó el trigger); se completan sus datos.
+UPDATE viajero
+   SET nombres = 'Andrea', apellidos = 'Torres Salazar',
+       tipo_documento = 'DNI', numero_documento = '72345678',
+       telefono = '987654321', fecha_nacimiento = DATE '1998-05-14'
+ WHERE correo_electronico = 'viajero@example.com';
 
--- ---------- 4. CATÁLOGOS ----------
-INSERT INTO tipo_de_asiento (nombre, descripcion) VALUES
-('Semi Cama', 'Asiento reclinable hasta 140°, con apoyapiés y mayor comodidad que uno estándar.'),
-('Cama', 'Asiento totalmente reclinable hasta 160°–180°, ideal para viajes nocturnos largos.'),
-('Cama Premium', 'Asiento extra ancho, reclinación total 180°, con cortinas privadas y servicios adicionales.'),
-('Ejecutivo', 'Mayor espacio entre asientos, reclinación media, a veces con pantalla y cargador.'),
-('Económico', 'Asiento básico con mínima reclinación, generalmente usado en buses de corta distancia.'),
-('Doble Piso - Superior', 'Asiento ubicado en la parte superior del bus, con mejor vista panorámica.'),
-('Doble Piso - Inferior', 'Asiento ubicado en la parte inferior, generalmente más cómodo y con menos movimiento.'),
-('VIP', 'Asiento exclusivo con reclinación total, servicio personalizado y espacio individual.'),
-('Premium Plus', 'Asiento cama de lujo con mantas, alimentación a bordo y entretenimiento.'),
-('Convencional', 'Asiento tradicional sin reclinación o con muy poca reclinación, usualmente usado para rutas urbanas.');
+-- ---------------------------------------------------------------------
+-- 4. TERMINALES (globales, gestionados por el administrador; datos referenciales)
+-- ---------------------------------------------------------------------
+INSERT INTO terminal (nombre, id_pais, id_provincia, distrito, direccion, referencia,
+                      latitud, longitud, telefono, id_administrador)
+SELECT v.nombre, p.id_pais, pr.id_provincia, v.distrito, v.direccion, v.referencia,
+       v.lat, v.lon, v.telefono,
+       (SELECT id_administrador FROM administrador WHERE correo_electronico = 'administrador@example.com')
+FROM (VALUES
+  ('Terminal Plaza Norte',               'PE', 'Lima',     'Independencia',  'Av. Alfredo Mendiola 1400',        'Frente al centro comercial Plaza Norte', -12.006000, -77.059000, '016000001'),
+  ('Terminal Terrapuerto Yerbateros',    'PE', 'Lima',     'Ate',            'Av. Nicolás Ayllón 2800',          'Cerca a la Vía Expresa',                 -12.041700, -76.987300, '016000002'),
+  ('Terminal Terrestre Ica',             'PE', 'Ica',      'Ica',            'Av. Lima 400',                     'Cerca a la Plaza de Armas',              -14.067800, -75.728600, '056000003'),
+  ('Terminal Terrestre Nazca',           'PE', 'Nazca',    'Nazca',          'Av. Los Incas 600',                'A dos cuadras de la plaza',              -14.831000, -74.939000, '056000004'),
+  ('Terminal Terrestre Arequipa',        'PE', 'Arequipa', 'Jacobo Hunter',  'Av. Arequipa s/n',                 'Junto al Terrapuerto',                   -16.429000, -71.524000, '054000005'),
+  ('Terminal Terrestre Moquegua',        'PE', 'Moquegua', 'Moquegua',       'Av. Ejército 700',                 'Cerca al Óvalo de ingreso',              -17.192700, -70.935300, '053000006'),
+  ('Terminal Terrestre Tacna',           'PE', 'Tacna',    'Tacna',          'Av. Hipólito Unanue 1100',         'Cerca a la Av. Industrial',              -18.010700, -70.245700, '052000007'),
+  ('Terminal Terrestre Cusco',           'PE', 'Cusco',    'Santiago',       'Av. Vía de Evitamiento s/n',       'Cerca a la Av. Pachacútec',              -13.534000, -71.956000, '084000008'),
+  ('Terminal Terrestre Puno',            'PE', 'Puno',     'Puno',           'Jr. Primero de Mayo 703',          'Cerca al lago Titicaca',                 -15.841000, -70.016600, '051000009'),
+  ('Terminal de Buses La Paz',           'BO', 'La Paz',   'La Paz',         'Plaza Antofagasta s/n',            'Zona Central',                           -16.495500, -68.154000, '+59122000010'),
+  ('Terminal Internacional Arica',       'CL', 'Arica',    'Arica',          'Av. Diego Portales 948',           'Cerca a la ruta 5',                      -18.478300, -70.312600, '+56582000011')
+) AS v(nombre, iso, prov, distrito, direccion, referencia, lat, lon, telefono)
+JOIN pais p       ON p.codigo_iso = v.iso
+JOIN provincia pr ON pr.id_pais = p.id_pais AND pr.nombre = v.prov;
 
-INSERT INTO servicio (nombre, descripcion) VALUES
-('Wi-Fi', 'Internet gratis durante el viaje.'),
-('Cena incluida', 'Cena caliente en viajes nocturnos largos.'),
-('Desayuno', 'Desayuno ligero en rutas largas.'),
-('Pantalla personal', 'Pantalla táctil con entretenimiento individual.'),
-('TV general', 'Pantalla compartida con programación general.'),
-('Cargador USB', 'Puerto USB en cada asiento.'),
-('Aire acondicionado', 'Climatización en todo el bus.'),
-('Baño a bordo', 'Baño disponible durante el viaje.'),
-('Asistente a bordo', 'Personal disponible para ayudarte.'),
-('Snack a bordo', 'Refrigerio incluido en el viaje.'),
-('Manta y almohada', 'Kit de descanso con manta y almohada.'),
-('Luz individual', 'Luz de lectura en cada asiento.'),
-('Cortina privada', 'Separación para privacidad del pasajero.'),
-('Seguridad GPS', 'Monitoreo del bus en tiempo real.'),
-('Equipaje de mano', 'Espacio seguro para mochilas o bolsos.'),
-('Toma de corriente', 'Enchufe para cargar dispositivos.');
+-- ---------------------------------------------------------------------
+-- 5. CATÁLOGOS DE FLOTA
+-- ---------------------------------------------------------------------
+INSERT INTO tipo_asiento (nombre, descripcion, angulo_reclinacion_grados) VALUES
+  ('Estándar',  'Asiento reclinable básico',                 110),
+  ('Semi cama', 'Reclinación parcial con apoyapiés',         140),
+  ('Cama',      'Reclinación casi horizontal',               160),
+  ('Suite',     'Totalmente horizontal',                     180);
 
--- ---------- 5. FLOTA ----------
-INSERT INTO bus (placa, marca, modelo, id_empresa) VALUES
-('AV 3637 VD', 'PLC', 'exercitationem', 19),
-('7403 RSC', 'Group', 'ad', 7),
-('4875 WSJ', 'LLC', 'dicta', 10),
-('9373 LYH', 'Ltd', 'laboriosam', 19),
-('4743 WRK', 'Group', 'repellat', 2),
-('7265 RGB', 'and Sons', 'suscipit', 19),
-('CS 2899 CF', 'Group', 'nostrum', 20),
-('9823 VMD', 'Ltd', 'ducimus', 2),
-('4707 WSR', 'Ltd', 'fugit', 14),
-('2041 SNW', 'PLC', 'quo', 2),
-('2552 ZYS', 'PLC', 'dolores', 2),
-('AL 6699 ZA', 'Inc', 'culpa', 10),
-('Z 3231 GW', 'LLC', 'soluta', 6),
-('3348 HPD', 'LLC', 'unde', 7),
-('TF 9053 ZH', 'Ltd', 'non', 19),
-('L 4337 NH', 'Group', 'alias', 18),
-('BA 8471 FN', 'Inc', 'deleniti', 16),
-('TF 3959 GB', 'and Sons', 'nemo', 7),
-('BI 3458 CH', 'Inc', 'eius', 14),
-('0401 PSK', 'PLC', 'facere', 4);
+-- Servicios generales (id_empresa NULL) y uno propio de la empresa.
+INSERT INTO servicio (id_empresa, nombre, descripcion) VALUES
+  (NULL, 'WiFi',                    'Internet inalámbrico a bordo'),
+  (NULL, 'Baño a bordo',            'Servicios higiénicos en el bus'),
+  (NULL, 'Pantalla individual',     'Entretenimiento en cada asiento'),
+  (NULL, 'Aire acondicionado',      'Climatización del bus'),
+  (NULL, 'Puerto USB',              'Carga de dispositivos en el asiento'),
+  (NULL, 'Frazadas y almohadas',    'Kit de descanso para viajes largos'),
+  (NULL, 'Refrigerio',              'Snack y bebida de cortesía');
+INSERT INTO servicio (id_empresa, nombre, descripcion)
+VALUES ((SELECT id_empresa FROM empresa WHERE correo_electronico = 'empresa@example.com'),
+        'Cafetería a bordo', 'Venta de bebidas calientes y snacks durante el viaje');
 
-INSERT INTO bus_servicio (id_bus, id_servicio) VALUES
-(4, 8),(17, 1),(10, 1),(8, 4),(20, 2),(8, 1),(18, 2),(5, 8),(6, 12),(18, 9),
-(4, 6),(1, 5),(1, 6),(16, 6),(17, 4),(9, 1),(8, 11),(12, 7),(14, 8);
+INSERT INTO caracteristica_zona (nombre, descripcion) VALUES
+  ('Embarque preferente',     'Abordaje prioritario'),
+  ('Snack de cortesía',       'Incluye snack y bebida'),
+  ('Cena a bordo',            'Cena incluida en viajes nocturnos'),
+  ('Atención personalizada',  'Azafata exclusiva para la zona');
 
-INSERT INTO piso (numero_de_piso, nombre, id_bus) VALUES
-(1, 'Piso 1', 3),
-(2, 'Piso 2', 3),
-(1, 'Piso 1', 7),
-(2, NULL, 7),
-(1, 'Piso inferior', 12),
-(2, 'Piso superior', 12),
-(1, 'Piso bajo', 5),
-(1, 'Nivel 1', 14),
-(2, NULL, 14),
-(3, 'Tercer piso', 14);
+-- ---------------------------------------------------------------------
+-- 6. FLOTA: tipos de bus (plantillas), zonas, asientos, buses
+-- ---------------------------------------------------------------------
+INSERT INTO tipo_bus (id_empresa, nombre, descripcion)
+SELECT e.id_empresa, v.nombre, v.descripcion
+FROM empresa e
+CROSS JOIN (VALUES
+  ('Doble piso VIP + Económico', 'Piso 1: zona VIP (51 asientos en total con el piso 2)'),
+  ('Un piso Salón 40',           'Bus de un piso con 40 asientos 2+2')
+) AS v(nombre, descripcion)
+WHERE e.correo_electronico = 'empresa@example.com';
 
--- cantidad_pisos coherente con los pisos cargados arriba
-UPDATE bus SET cantidad_pisos = 2 WHERE id_bus IN (3, 7, 12);
-UPDATE bus SET cantidad_pisos = 3 WHERE id_bus = 14;
+INSERT INTO zona (id_tipo_bus, nombre, descripcion, tarifa_base_por_km)
+SELECT t.id_tipo_bus, v.zona, v.descripcion, v.tarifa
+FROM (VALUES
+  ('Doble piso VIP + Económico', 'VIP',       'Piso 1: asientos cama, distribución 2+1',          0.1600),
+  ('Doble piso VIP + Económico', 'Económica', 'Piso 2: semi cama y estándar, distribución 2+2',   0.0700),
+  ('Un piso Salón 40',           'Salón',     'Piso 1: asientos estándar, distribución 2+2',      0.0600)
+) AS v(tipo, zona, descripcion, tarifa)
+JOIN tipo_bus t ON t.nombre = v.tipo;
 
--- "estado" ya no existe en asiento (la disponibilidad se calcula por viaje con boleto)
-INSERT INTO asiento (ubicacion, tiene_ventana, id_piso, id_tipo_de_asiento) VALUES
-('A1', TRUE,  1, 3),
-('A2', FALSE, 1, 4),
-('B1', TRUE,  1, 2),
-('B2', FALSE, 1, 7),
-('C1', TRUE,  1, 5),
-('C2', FALSE, 1, 6),
-('D1', FALSE, 1, 1),
-('D2', TRUE,  1, 8),
-('E1', TRUE,  1, 9),
-('E2', FALSE, 1, 10),
-('A1', FALSE, 2, 1),
-('A2', TRUE,  2, 2),
-('B1', TRUE,  2, 3),
-('B2', FALSE, 2, 4),
-('C1', FALSE, 2, 5),
-('C2', TRUE,  2, 6),
-('D1', TRUE,  2, 7),
-('D2', FALSE, 2, 8),
-('E1', FALSE, 2, 9),
-('E2', TRUE,  2, 10),
-('A1', TRUE,  3, 3),
-('A2', FALSE, 3, 2),
-('B1', FALSE, 3, 5),
-('B2', TRUE,  3, 6),
-('C1', TRUE,  3, 7),
-('C2', FALSE, 3, 8),
-('D1', TRUE,  3, 9),
-('D2', FALSE, 3, 10),
-('E1', FALSE, 3, 1),
-('E2', TRUE,  3, 4);
+INSERT INTO zona_caracteristica (id_zona, id_caracteristica)
+SELECT z.id_zona, c.id_caracteristica
+FROM (VALUES
+  ('VIP', 'Embarque preferente'),
+  ('VIP', 'Cena a bordo'),
+  ('VIP', 'Atención personalizada'),
+  ('Económica', 'Snack de cortesía')
+) AS v(zona, caracteristica)
+JOIN zona z ON z.nombre = v.zona
+JOIN caracteristica_zona c ON c.nombre = v.caracteristica;
 
--- ---------- 6. RUTAS Y VIAJES ----------
-INSERT INTO terminal (nombre, pais, ciudad, direccion, latitud, longitud, id_empresa) VALUES
-('La Coruña', 'Perú', 'Navarra', 'Vial de Edelmiro Sans 6 Álava, 53353', -9.213791, -70.991871, 1),
-('Melilla', 'Perú', 'Baleares', 'Via de Aránzazu Jordá 89 Puerta 6  Vizcaya, 83110', -7.59683, -71.300538, 8),
-('Segovia', 'Perú', 'Toledo', 'Cuesta de Bienvenida Bellido 82 Puerta 1  Lugo, 91124', -9.210214, -74.510704, 11),
-('Málaga', 'Perú', 'Toledo', 'Pasaje Noemí Paredes 94 Puerta 6  Cuenca, 84696', -11.982053, -71.143711, 7),
-('Santa Cruz de Tenerife', 'Perú', 'Almería', 'Calle Porfirio Trillo 44 Las Palmas, 61247', -10.741621, -70.238168, 4),
-('Lleida', 'Perú', 'Pontevedra', 'Paseo de Godofredo Calderón 2 Huesca, 68720', -11.863947, -70.822127, 13),
-('Cádiz', 'Perú', 'León', 'Alameda de Estela Arjona 278 Lleida, 04565', -6.002528, -72.528391, 2),
-('Málaga', 'Perú', 'Almería', 'Vial Gregorio Ureña 61 Tarragona, 02017', -11.391014, -70.596834, 7),
-('Salamanca', 'Perú', 'Soria', 'Paseo Custodia Barral 28 Puerta 4  Málaga, 49356', -9.474718, -74.501569, 16),
-('Asturias', 'Perú', 'Albacete', 'Glorieta Vilma Escalona 42 Piso 2  Baleares, 38185', -9.044541, -73.239213, 14),
-('Valencia', 'Perú', 'Tarragona', 'Via Débora Carrión 986 Piso 5  Navarra, 12524', -8.892374, -73.694285, 3),
-('Huesca', 'Perú', 'Jaén', 'Cañada Bárbara Bou 75 Apt. 18  Palencia, 21649', -8.750938, -74.611143, 13),
-('Huelva', 'Perú', 'Valencia', 'Rambla Jafet Girón 71 Puerta 3  Cantabria, 38214', -8.282571, -70.802398, 4),
-('Valladolid', 'Perú', 'Salamanca', 'Urbanización Maxi Contreras 32 Lleida, 17572', -6.388551, -72.249354, 15),
-('Badajoz', 'Perú', 'Cantabria', 'Camino de Leire Mendizábal 25 Las Palmas, 37118', -8.985129, -74.026768, 8),
-('Sevilla', 'Perú', 'Pontevedra', 'Vial Iker Solera 230 Santa Cruz de Tenerife, 56433', -8.38763, -73.672302, 19),
-('Cádiz', 'Perú', 'Huelva', 'Glorieta Carolina Sanabria 8 La Rioja, 85887', -8.064506, -74.543317, 17),
-('Valladolid', 'Perú', 'Cantabria', 'Calle Omar Vera 43 Lleida, 62415', -7.112777, -76.568846, 17),
-('Cantabria', 'Perú', 'Baleares', 'Callejón de Judith Suarez 21 Santa Cruz de Tenerife, 14147', -7.493481, -75.96327, 14),
-('La Coruña', 'Perú', 'Valencia', 'Avenida de Juana Vallejo 46 Puerta 5  Tarragona, 90279', -11.454009, -71.395785, 10),
-('Lima Central', 'Perú', 'Lima', 'Av. Javier Prado Este 999, San Isidro', -12.092136, -77.033779, 5),
-('Arequipa Norte', 'Perú', 'Arequipa', 'Calle Santa Catalina 321, Cercado', -16.398804, -71.537451, 9),
-('Cusco Sur', 'Perú', 'Cusco', 'Av. Huayruropata 1205, Wanchaq', -13.522640, -71.967339, 6),
-('Tumbes Terminal', 'Perú', 'Tumbes', 'Av. Tumbes Norte 300, Zarumilla', -3.566883, -80.451533, 12);
+INSERT INTO zona_tipo_asiento (id_zona, id_tipo_asiento, tarifa_adicional)
+SELECT z.id_zona, ta.id_tipo_asiento, v.adicional
+FROM (VALUES
+  ('VIP',       'Cama',      15.00),
+  ('Económica', 'Semi cama',  8.00),
+  ('Económica', 'Estándar',   0.00),
+  ('Salón',     'Estándar',   0.00)
+) AS v(zona, tipo_asiento, adicional)
+JOIN zona z          ON z.nombre = v.zona
+JOIN tipo_asiento ta ON ta.nombre = v.tipo_asiento;
 
-INSERT INTO ruta (distancia_de_recorrido, id_terminal_origen, id_terminal_destino, id_empresa) VALUES
-(504.6, 20, 15, 11),
-(495.81, 13, 16, 12),
-(891.54, 18, 9, 2),
-(411.55, 13, 18, 2),
-(715.39, 5, 9, 13),
-(363.29, 2, 4, 8),
-(170.53, 7, 8, 20),
-(699.78, 13, 4, 6),
-(968.99, 17, 18, 14),
-(476.11, 20, 8, 12),
-(190.12, 13, 12, 18),
-(471.05, 3, 19, 3),
-(338.49, 8, 9, 7),
-(262.29, 15, 1, 17),
-(822.28, 16, 1, 20),
-(784.8, 11, 13, 2),
-(603.46, 18, 9, 20),
-(924.44, 13, 14, 7),
-(836.36, 13, 1, 19),
-(213.6, 2, 12, 9);
+-- Código = piso + letra de columna + fila (p. ej. 1A1). fila_mapa/columna_mapa dibujan el plano;
+-- la columna 3 queda libre como pasillo.
+-- VIP (piso 1): 5 filas, columnas A, B | pasillo | C  -> 15 asientos tipo Cama.
+INSERT INTO asiento (id_tipo_bus, id_zona, id_tipo_asiento, codigo, tiene_ventana, fila_mapa, columna_mapa)
+SELECT z.id_tipo_bus, z.id_zona, ta.id_tipo_asiento,
+       '1' || l.letra || f.n::text, l.letra IN ('A', 'C'), f.n, l.col
+FROM zona z
+CROSS JOIN generate_series(1, 5) AS f(n)
+CROSS JOIN (VALUES ('A', 1), ('B', 2), ('C', 4)) AS l(letra, col)
+JOIN tipo_asiento ta ON ta.nombre = 'Cama'
+WHERE z.nombre = 'VIP';
 
-INSERT INTO viaje (estado, instante_abordaje, instante_partida, instante_llegada, id_ruta, id_bus, id_empresa) VALUES
-('FINALIZADO','2025-03-21 03:27:35','2025-03-21 04:27:35','2025-03-21 12:27:35',10,6,9),
-('RETRASADO','2025-02-06 18:07:35',NULL,NULL,10,17,10),
-('RETRASADO','2025-03-06 03:48:09',NULL,NULL,15,1,6),
-('CANCELADO','2025-02-19 06:08:50',NULL,NULL,4,19,2),
-('CANCELADO','2025-06-12 08:38:56',NULL,NULL,19,20,5),
-('PROGRAMADO','2025-05-24 01:51:41',NULL,NULL,8,9,18),
-('FINALIZADO','2025-02-20 11:37:24','2025-02-20 12:37:24','2025-02-20 17:37:24',6,3,11),
-('CANCELADO','2025-03-21 04:42:47',NULL,NULL,20,18,6),
-('FINALIZADO','2025-03-01 10:20:01','2025-03-01 11:20:01','2025-03-01 19:20:01',10,6,16),
-('RETRASADO','2025-05-30 20:19:54',NULL,NULL,11,4,1),
-('PROGRAMADO','2025-03-14 11:52:59',NULL,NULL,8,8,17),
-('RETRASADO','2025-04-15 21:50:42',NULL,NULL,12,15,8),
-('CANCELADO','2025-05-01 16:42:18',NULL,NULL,11,5,13),
-('RETRASADO','2025-01-08 21:35:16',NULL,NULL,4,8,9),
-('CANCELADO','2025-05-11 08:35:21',NULL,NULL,6,5,10);
+-- Económica (piso 2): 9 filas, A, B | pasillo | C, D -> 36 asientos (filas 1-3 semi cama, 4-9 estándar).
+INSERT INTO asiento (id_tipo_bus, id_zona, id_tipo_asiento, codigo, tiene_ventana, fila_mapa, columna_mapa)
+SELECT z.id_tipo_bus, z.id_zona, ta.id_tipo_asiento,
+       '2' || l.letra || f.n::text, l.letra IN ('A', 'D'), f.n, l.col
+FROM zona z
+CROSS JOIN generate_series(1, 9) AS f(n)
+CROSS JOIN (VALUES ('A', 1), ('B', 2), ('C', 4), ('D', 5)) AS l(letra, col)
+JOIN tipo_asiento ta ON ta.nombre = CASE WHEN f.n <= 3 THEN 'Semi cama' ELSE 'Estándar' END
+WHERE z.nombre = 'Económica';
 
-INSERT INTO tarifa (precio, detalle, id_viaje, id_tipo_de_asiento) VALUES
-(190.25, 'sapiente', 9, 4),
-(78.63, 'eveniet', 8, 8),
-(81.71, 'perspiciatis', 2, 9),
-(123.85, 'minus', 12, 5),
-(26.66, 'facere', 8, 4),
-(87.61, 'aliquid', 11, 8),
-(154.09, 'ut', 6, 9),
-(120.3, 'doloremque', 3, 5),
-(115.46, 'eveniet', 5, 5),
-(62.69, 'culpa', 2, 5),
-(77.86, 'saepe', 10, 7),
-(32.67, 'tempora', 7, 7),
-(49.8, 'eum', 5, 5),
-(76.78, 'aut', 5, 8),
-(165.96, 'at', 2, 9),
-(120.04, 'autem', 9, 3),
-(146.47, 'nam', 9, 4),
-(30.57, 'voluptate', 12, 4),
-(81.03, 'voluptatem', 7, 6),
-(93.77, 'debitis', 11, 8);
+-- Salón (un piso): 10 filas, A, B | pasillo | C, D -> 40 asientos estándar.
+INSERT INTO asiento (id_tipo_bus, id_zona, id_tipo_asiento, codigo, tiene_ventana, fila_mapa, columna_mapa)
+SELECT z.id_tipo_bus, z.id_zona, ta.id_tipo_asiento,
+       '1' || l.letra || f.n::text, l.letra IN ('A', 'D'), f.n, l.col
+FROM zona z
+CROSS JOIN generate_series(1, 10) AS f(n)
+CROSS JOIN (VALUES ('A', 1), ('B', 2), ('C', 4), ('D', 5)) AS l(letra, col)
+JOIN tipo_asiento ta ON ta.nombre = 'Estándar'
+WHERE z.nombre = 'Salón';
 
--- ---------- 7. PAGOS, RESERVAS, PASAJEROS Y BOLETOS ----------
-INSERT INTO pago (monto, estado, metodo_pago, moneda) VALUES
-(70.01, 'PENDIENTE', 'TARJETA', 'PEN'),
-(68.03, 'PENDIENTE', 'TARJETA', 'PEN'),
-(29.41, 'PENDIENTE', 'TRANSFERENCIA', 'PEN'),
-(38.06, 'PENDIENTE', 'TRANSFERENCIA', 'PEN'),
-(41.29, 'RECHAZADO', 'TRANSFERENCIA', 'PEN'),
-(92.95, 'RECHAZADO', 'TARJETA', 'PEN'),
-(78.2, 'PENDIENTE', 'TRANSFERENCIA', 'USD'),
-(21.97, 'PAGADO', 'TARJETA', 'USD'),
-(30.44, 'PENDIENTE', 'TARJETA', 'USD'),
-(62.58, 'RECHAZADO', 'TARJETA', 'PEN'),
-(76.09, 'PAGADO', 'TRANSFERENCIA', 'PEN'),
-(13.11, 'PENDIENTE', 'TRANSFERENCIA', 'PEN'),
-(14.05, 'PENDIENTE', 'TARJETA', 'PEN'),
-(66.89, 'PAGADO', 'TARJETA', 'PEN'),
-(37.79, 'PAGADO', 'TRANSFERENCIA', 'PEN'),
-(75.68, 'PAGADO', 'TARJETA', 'PEN'),
-(47.13, 'PENDIENTE', 'TRANSFERENCIA', 'PEN'),
-(47.9, 'PENDIENTE', 'TRANSFERENCIA', 'USD'),
-(82.61, 'PENDIENTE', 'TRANSFERENCIA', 'USD'),
-(51.17, 'RECHAZADO', 'TRANSFERENCIA', 'USD');
+-- Buses (4 de doble piso y 2 de un piso). La velocidad promedio define los horarios estimados.
+INSERT INTO bus (id_empresa, id_tipo_bus, placa, marca, modelo, anio_fabricacion, velocidad_promedio_kmh)
+SELECT t.id_empresa, t.id_tipo_bus, v.placa, v.marca, v.modelo, v.anio, v.velocidad
+FROM (VALUES
+  ('AVF-412', 'Doble piso VIP + Económico', 'Volvo',         'B450R',    2022, 65.00),
+  ('BKL-930', 'Doble piso VIP + Económico', 'Scania',        'K410',     2021, 62.00),
+  ('CDM-257', 'Doble piso VIP + Económico', 'Mercedes-Benz', 'O-500 RSD',2023, 68.00),
+  ('GHT-508', 'Doble piso VIP + Económico', 'Volvo',         'B450R',    2024, 65.00),
+  ('D5T-681', 'Un piso Salón 40',           'Marcopolo',     'Paradiso', 2020, 60.00),
+  ('F2K-374', 'Un piso Salón 40',           'Hyundai',       'Universe', 2019, 60.00)
+) AS v(placa, tipo, marca, modelo, anio, velocidad)
+JOIN tipo_bus t ON t.nombre = v.tipo;
 
-INSERT INTO reserva (estado, id_viajero, id_viaje_ida, id_viaje_vuelta, id_pago) VALUES
-('PAGADA', 4, 1, 9, 2),
-('COMPLETADA', 2, 6, NULL, 1),
-('CANCELADA', 9, 3, NULL, 4),
-('PAGO_PENDIENTE', 1, 5, NULL, NULL),
-('COMPLETADA', 8, 7, 1, 3),
-('PAGADA', 10, 14, NULL, 6),
-('CANCELADA', 5, 8, NULL, 5),
-('PAGADA', 7, 11, 6, 9),
-('COMPLETADA', 3, 10, NULL, 8),
-('PAGO_PENDIENTE', 6, 2, NULL, NULL);
+INSERT INTO bus_servicio (id_bus, id_servicio)
+SELECT b.id_bus, s.id_servicio
+FROM bus b
+JOIN tipo_bus t ON t.id_tipo_bus = b.id_tipo_bus AND t.nombre = 'Doble piso VIP + Económico'
+JOIN servicio s ON s.nombre IN ('WiFi', 'Baño a bordo', 'Pantalla individual', 'Aire acondicionado',
+                                'Puerto USB', 'Frazadas y almohadas', 'Cafetería a bordo');
 
--- Ahora pasajero es solo la persona; el asiento y la tarifa van en boleto
-INSERT INTO pasajero (tipo_documento, numero_documento, nombres, apellidos, correo_electronico, telefono, id_reserva) VALUES
-('DNI', '78451236', 'Juan Carlos', 'Pérez López', 'juan.perez@mail.com', '987654321', 1),
-('PASAPORTE', 'PA1234567', 'María Elena', 'Gómez Fernández', 'maria.gomez@mail.com', NULL, 1),
-('CEDULA', 'CE987654', 'Carlos Andrés', 'Martínez Rojas', NULL, '912345678', 2),
-('DNI', '87654321', 'Ana Patricia', 'Silva Mendoza', 'ana.silva@mail.com', '934567890', 3),
-('CARNET_EXTRANJERIA', 'CX456789', 'Luis Miguel', 'Torres Vargas', 'luis.torres@mail.com', NULL, 4),
-('DNI', '76543210', 'Sofía Alejandra', 'Díaz Castro', NULL, '945678901', 5),
-('PASAPORTE', 'PA7654321', 'Pedro Antonio', 'Ruiz Sánchez', 'pedro.ruiz@mail.com', '956789012', 5),
-('DNI', '65432109', 'Laura Isabel', 'Hernández García', 'laura.hernandez@mail.com', '967890123', 6),
-('CEDULA', 'CE123456', 'Jorge Eduardo', 'Flores Ramírez', NULL, NULL, 7),
-('DNI', '54321098', 'Carmen Rosa', 'Vega Ortiz', 'carmen.vega@mail.com', '978901234', 8),
-('CARNET_EXTRANJERIA', 'CX321654', 'Ricardo Alfonso', 'Morales Pinto', 'ricardo.morales@mail.com', '989012345', 8),
-('DNI', '43210987', 'Daniela Fernanda', 'Castillo Ríos', NULL, '990123456', 9),
-('PASAPORTE', 'PA9876543', 'Oscar Manuel', 'Jiménez León', 'oscar.jimenez@mail.com', NULL, 10),
-('DNI', '32109876', 'Patricia Lucía', 'Navarro Campos', 'patricia.navarro@mail.com', '901234567', 10),
-('OTRO', 'OT123456', 'Fernando José', 'Salas Guerrero', 'fernando.salas@mail.com', '912345670', 10);
+INSERT INTO bus_servicio (id_bus, id_servicio)
+SELECT b.id_bus, s.id_servicio
+FROM bus b
+JOIN tipo_bus t ON t.id_tipo_bus = b.id_tipo_bus AND t.nombre = 'Un piso Salón 40'
+JOIN servicio s ON s.nombre IN ('Baño a bordo', 'Aire acondicionado', 'Puerto USB');
 
--- (id_pasajero, id_viaje, id_asiento, id_tarifa): el viaje sale de la tarifa original
-INSERT INTO boleto (id_pasajero, id_viaje, id_asiento, id_tarifa) VALUES
-(1,  9,  1, 16),
-(2,  8,  3,  2),
-(3,  6,  7,  7),
-(4,  2, 12,  3),
-(5,  5, 15, 13),
-(6,  7, 18, 12),
-(7, 10,  5, 11),
-(8,  2, 22, 15),
-(9, 11, 17,  6),
-(10, 3, 27,  8),
-(11, 7,  9, 19),
-(12, 5, 30,  9),
-(13, 2,  4, 10),
-(14, 5, 10, 14),
-(15, 11, 20, 20);
+-- ---------------------------------------------------------------------
+-- 7. CHOFERES (no inician sesión). El chofer 10 queda libre como suplente.
+-- ---------------------------------------------------------------------
+INSERT INTO chofer (id_empresa, nombres, apellidos, numero_documento, numero_licencia,
+                    categoria_licencia, telefono, fecha_nacimiento)
+SELECT e.id_empresa, v.nombres, v.apellidos, v.dni, v.licencia, v.categoria, v.telefono, v.nac::date
+FROM empresa e
+CROSS JOIN (VALUES
+  ('Carlos',  'Mendoza Quispe',    '40123451', 'Q40123451', 'A-IIIb', '951000001', '1980-02-11'),
+  ('Luis',    'Huamán Rojas',      '41234562', 'Q41234562', 'A-IIIb', '951000002', '1982-07-23'),
+  ('Jorge',   'Valdivia Cáceres',  '42345673', 'Q42345673', 'A-IIIc', '951000003', '1979-11-05'),
+  ('Miguel',  'Salas Condori',     '43456784', 'Q43456784', 'A-IIIb', '951000004', '1985-01-30'),
+  ('Pedro',   'Anccasi Flores',    '44567895', 'Q44567895', 'A-IIIc', '951000005', '1977-09-17'),
+  ('Ricardo', 'Paredes Zegarra',   '45678906', 'Q45678906', 'A-IIIb', '951000006', '1983-04-08'),
+  ('Víctor',  'Choque Mamani',     '46789017', 'Q46789017', 'A-IIIb', '951000007', '1981-12-14'),
+  ('Hugo',    'Ticona Apaza',      '47890128', 'Q47890128', 'A-IIIb', '951000008', '1986-06-02'),
+  ('Fredy',   'Quispe Huanca',     '48901239', 'Q48901239', 'A-IIIc', '951000009', '1978-10-26'),
+  ('Marco',   'Cárdenas Vega',     '49012340', 'Q49012340', 'A-IIIb', '951000010', '1990-03-19')
+) AS v(nombres, apellidos, dni, licencia, categoria, telefono, nac)
+WHERE e.correo_electronico = 'empresa@example.com';
+
+-- ---------------------------------------------------------------------
+-- 8. RUTAS (de la empresa) Y TRAMOS
+-- ---------------------------------------------------------------------
+INSERT INTO ruta (id_empresa, nombre, id_terminal_origen, id_terminal_destino)
+SELECT e.id_empresa, v.nombre, o.id_terminal, d.id_terminal
+FROM empresa e
+CROSS JOIN (VALUES
+  ('Lima - Arequipa',   'Terminal Plaza Norte',          'Terminal Terrestre Arequipa'),
+  ('Arequipa - Lima',   'Terminal Terrestre Arequipa',   'Terminal Plaza Norte'),
+  ('Arequipa - Tacna',  'Terminal Terrestre Arequipa',   'Terminal Terrestre Tacna'),
+  ('Tacna - Arequipa',  'Terminal Terrestre Tacna',      'Terminal Terrestre Arequipa'),
+  ('Tacna - Arica',     'Terminal Terrestre Tacna',      'Terminal Internacional Arica'),
+  ('Arica - Tacna',     'Terminal Internacional Arica',  'Terminal Terrestre Tacna'),
+  ('Cusco - La Paz',    'Terminal Terrestre Cusco',      'Terminal de Buses La Paz'),
+  ('La Paz - Cusco',    'Terminal de Buses La Paz',      'Terminal Terrestre Cusco')
+) AS v(nombre, origen, destino)
+JOIN terminal o ON o.nombre = v.origen
+JOIN terminal d ON d.nombre = v.destino
+WHERE e.correo_electronico = 'empresa@example.com';
+
+-- Tramos contiguos 1..n (distancias por carretera aproximadas). Se validan al COMMIT.
+INSERT INTO tramo_ruta (id_ruta, posicion, id_terminal_inicio, id_terminal_fin, distancia_km)
+SELECT r.id_ruta, v.pos, ti.id_terminal, tf.id_terminal, v.km
+FROM (VALUES
+  ('Lima - Arequipa', 1, 'Terminal Plaza Norte',         'Terminal Terrestre Ica',          303.00),
+  ('Lima - Arequipa', 2, 'Terminal Terrestre Ica',       'Terminal Terrestre Nazca',        140.00),
+  ('Lima - Arequipa', 3, 'Terminal Terrestre Nazca',     'Terminal Terrestre Arequipa',     570.00),
+
+  ('Arequipa - Lima', 1, 'Terminal Terrestre Arequipa',  'Terminal Terrestre Nazca',        570.00),
+  ('Arequipa - Lima', 2, 'Terminal Terrestre Nazca',     'Terminal Terrestre Ica',          140.00),
+  ('Arequipa - Lima', 3, 'Terminal Terrestre Ica',       'Terminal Plaza Norte',            303.00),
+
+  ('Arequipa - Tacna', 1, 'Terminal Terrestre Arequipa', 'Terminal Terrestre Moquegua',     215.00),
+  ('Arequipa - Tacna', 2, 'Terminal Terrestre Moquegua', 'Terminal Terrestre Tacna',        155.00),
+
+  ('Tacna - Arequipa', 1, 'Terminal Terrestre Tacna',    'Terminal Terrestre Moquegua',     155.00),
+  ('Tacna - Arequipa', 2, 'Terminal Terrestre Moquegua', 'Terminal Terrestre Arequipa',     215.00),
+
+  ('Tacna - Arica',   1, 'Terminal Terrestre Tacna',     'Terminal Internacional Arica',     62.00),
+  ('Arica - Tacna',   1, 'Terminal Internacional Arica', 'Terminal Terrestre Tacna',         62.00),
+
+  ('Cusco - La Paz',  1, 'Terminal Terrestre Cusco',     'Terminal Terrestre Puno',         390.00),
+  ('Cusco - La Paz',  2, 'Terminal Terrestre Puno',      'Terminal de Buses La Paz',        410.00),
+
+  ('La Paz - Cusco',  1, 'Terminal de Buses La Paz',     'Terminal Terrestre Puno',         410.00),
+  ('La Paz - Cusco',  2, 'Terminal Terrestre Puno',      'Terminal Terrestre Cusco',        390.00)
+) AS v(ruta, pos, ini, fin, km)
+JOIN ruta r      ON r.nombre = v.ruta
+JOIN terminal ti ON ti.nombre = v.ini
+JOIN terminal tf ON tf.nombre = v.fin;
+
+-- ---------------------------------------------------------------------
+-- 9. POLÍTICA DE CANCELACIÓN (reembolso según horas antes de la salida)
+-- ---------------------------------------------------------------------
+INSERT INTO politica_cancelacion (id_empresa, horas_antes_salida, porcentaje_reembolso)
+SELECT e.id_empresa, v.horas, v.pct
+FROM empresa e
+CROSS JOIN (VALUES (48, 90), (24, 70), (12, 50), (6, 25), (0, 0)) AS v(horas, pct)
+WHERE e.correo_electronico = 'empresa@example.com';
+
+-- ---------------------------------------------------------------------
+-- 10. PLANES DE VIAJE (uno por ruta). tiempo_parada_horas = espera en cada terminal
+--     intermedio y también el descanso del chofer. Vigencia: nov 2026 - may 2027.
+-- ---------------------------------------------------------------------
+INSERT INTO plan_viaje (id_empresa, id_ruta, nombre, vigencia_inicio, vigencia_fin, tiempo_parada_horas)
+SELECT r.id_empresa, r.id_ruta, 'Plan ' || r.nombre,
+       TIMESTAMPTZ '2026-11-01 00:00:00+00', TIMESTAMPTZ '2027-06-01 00:00:00+00', v.parada
+FROM (VALUES
+  ('Lima - Arequipa',  0.50),
+  ('Arequipa - Lima',  0.50),
+  ('Arequipa - Tacna', 0.25),
+  ('Tacna - Arequipa', 0.25),
+  ('Tacna - Arica',    0.00),
+  ('Arica - Tacna',    0.00),
+  ('Cusco - La Paz',   1.00),
+  ('La Paz - Cusco',   1.00)
+) AS v(ruta, parada)
+JOIN ruta r ON r.nombre = v.ruta;
+
+-- ---------------------------------------------------------------------
+-- 11. FRECUENCIAS (día de la semana y hora en UTC; 1 = lunes ... 7 = domingo)
+--   Lima/Arequipa/Tacna/Cusco = UTC-5, así que 00:00 UTC = 19:00 hora local del día anterior.
+--   Lima - Arequipa (sale 19:00 local):
+--     Bus AVF-412: lun, mié, vie local (UTC 2,4,6) | BKL-930: mar, jue, sáb (UTC 3,5,7) | CDM-257: dom (UTC 1)
+--   Arequipa - Lima (sale 19:00 local, el bus vuelve al día siguiente de llegar):
+--     AVF-412: mar, jue, sáb (UTC 3,5,7) | BKL-930: mié, vie, dom (UTC 4,6,1) | CDM-257: lun (UTC 2)
+--   Arequipa - Tacna 07:00 local (12:00 UTC) lun, mié, vie; Tacna - Arequipa mar, jue, sáb.
+--   Tacna - Arica 08:00 local (13:00 UTC) y Arica - Tacna 13:00 local (18:00 UTC), lun a vie.
+--   Cusco - La Paz sale 20:00 local (01:00 UTC del día siguiente): mar y vie local (UTC 3,6);
+--   La Paz - Cusco: UTC 4,7.
+-- Ningún bus ni chofer se solapa consigo mismo (las exclusiones del DDL lo validan al generar).
+-- ---------------------------------------------------------------------
+INSERT INTO frecuencia (id_plan, id_empresa, id_dia, hora_salida_utc, id_bus, id_chofer)
+SELECT pl.id_plan, pl.id_empresa, d.dia, f.hora::time, b.id_bus, c.id_chofer
+FROM (VALUES
+  ('Lima - Arequipa',  'AVF-412', 'Q40123451', '00:00', ARRAY[2,4,6]),
+  ('Lima - Arequipa',  'BKL-930', 'Q42345673', '00:00', ARRAY[3,5,7]),
+  ('Lima - Arequipa',  'CDM-257', 'Q44567895', '00:00', ARRAY[1]),
+  ('Arequipa - Lima',  'AVF-412', 'Q41234562', '00:00', ARRAY[3,5,7]),
+  ('Arequipa - Lima',  'BKL-930', 'Q43456784', '00:00', ARRAY[4,6,1]),
+  ('Arequipa - Lima',  'CDM-257', 'Q45678906', '00:00', ARRAY[2]),
+  ('Arequipa - Tacna', 'D5T-681', 'Q46789017', '12:00', ARRAY[1,3,5]),
+  ('Tacna - Arequipa', 'D5T-681', 'Q46789017', '12:00', ARRAY[2,4,6]),
+  ('Tacna - Arica',    'F2K-374', 'Q47890128', '13:00', ARRAY[1,2,3,4,5]),
+  ('Arica - Tacna',    'F2K-374', 'Q47890128', '18:00', ARRAY[1,2,3,4,5]),
+  ('Cusco - La Paz',   'GHT-508', 'Q48901239', '01:00', ARRAY[3,6]),
+  ('La Paz - Cusco',   'GHT-508', 'Q48901239', '01:00', ARRAY[4,7])
+) AS f(ruta, placa, licencia, hora, dias)
+CROSS JOIN LATERAL unnest(f.dias) AS d(dia)
+JOIN plan_viaje pl ON pl.nombre = 'Plan ' || f.ruta
+JOIN bus b         ON b.placa = f.placa
+JOIN chofer c      ON c.numero_licencia = f.licencia;
+
+-- ---------------------------------------------------------------------
+-- 12. GENERACIÓN DE VIAJES (90 días desde el 10/nov/2026). Estricto: si hubiera solape
+--     de bus o chofer, el script falla con un mensaje claro. p_solo_futuros = FALSE para que
+--     el rango sea fijo sin depender del reloj del servidor.
+-- ---------------------------------------------------------------------
+SELECT sp_generar_viajes(DATE '2026-11-10', DATE '2027-02-07', NULL, TRUE, FALSE) AS viajes_generados;
+
+-- ---------------------------------------------------------------------
+-- 13. RESERVAS DE EJEMPLO (todas del viajero@example.com), usando viajes futuros
+--     Flujo: reserva (hold 10 min) -> pasajeros -> boletos -> pago PAGADO (el trigger
+--     pasa la reserva a PAGADA).
+--     R1: 2 pasajeros, Lima -> Arequipa en VIP.
+--     R2: ida y vuelta Lima -> Nazca -> Lima (dos viajes, sentido IDA y VUELTA).
+--     R3: con escala: Lima -> Arequipa y luego Arequipa -> Tacna (otro viaje, otro tipo de bus).
+--     R4: Tacna -> Arica, pagada y luego CANCELADA por el viajero (reembolso según política).
+--     R5: Cusco -> La Paz (internacional) con un pasajero extranjero con pasaporte.
+-- ---------------------------------------------------------------------
+DO $$
+DECLARE
+  v_viajero INT; v_res INT; v_pas1 INT; v_pas2 INT;
+  v_v1 INT; v_v2 INT; v_ini TIMESTAMPTZ; v_arr TIMESTAMPTZ; v_monto NUMERIC;
+BEGIN
+  SELECT id_viajero INTO STRICT v_viajero FROM viajero WHERE correo_electronico = 'viajero@example.com';
+
+  -- ===== R1: Lima -> Arequipa, 2 pasajeros VIP =====
+  SELECT v.id_viaje INTO STRICT v_v1
+  FROM viaje v
+  JOIN frecuencia fr ON fr.id_frecuencia = v.id_frecuencia
+  JOIN plan_viaje pl ON pl.id_plan = fr.id_plan
+  WHERE pl.nombre = 'Plan Lima - Arequipa' AND v.estado = 'PROGRAMADO'
+    AND v.inicio_utc > now() + interval '5 days'
+  ORDER BY v.inicio_utc LIMIT 1;
+
+  INSERT INTO reserva (id_viajero, contacto_correo, contacto_telefono)
+  VALUES (v_viajero, 'viajero@example.com', '987654321') RETURNING id_reserva INTO v_res;
+  INSERT INTO pasajero (id_reserva, id_viajero, tipo_documento, numero_documento, nombres, apellidos,
+                        fecha_nacimiento, correo_electronico, telefono)
+  VALUES (v_res, v_viajero, 'DNI', '72345678', 'Andrea', 'Torres Salazar', DATE '1998-05-14',
+          'viajero@example.com', '987654321') RETURNING id_pasajero INTO v_pas1;
+  INSERT INTO pasajero (id_reserva, tipo_documento, numero_documento, nombres, apellidos,
+                        fecha_nacimiento, telefono)
+  VALUES (v_res, 'DNI', '70123456', 'Luis', 'Torres Salazar', DATE '2001-09-02', '987000111')
+  RETURNING id_pasajero INTO v_pas2;
+  PERFORM fn_crear_boleto(v_res, v_pas1, v_v1, 1, 4, '1A1');
+  PERFORM fn_crear_boleto(v_res, v_pas2, v_v1, 1, 4, '1B1');
+  SELECT COALESCE(SUM(precio_total), 0) INTO v_monto FROM boleto WHERE id_reserva = v_res;
+  INSERT INTO pago (id_reserva, monto, moneda, metodo_pago, estado, codigo_transaccion, pagado_en)
+  VALUES (v_res, v_monto, 'PEN', 'YAPE', 'PAGADO', 'YAPE-20261109-0001', now());
+
+  -- ===== R2: ida y vuelta Lima -> Nazca -> Lima =====
+  SELECT v.id_viaje, v.inicio_utc INTO STRICT v_v1, v_ini
+  FROM viaje v
+  JOIN frecuencia fr ON fr.id_frecuencia = v.id_frecuencia
+  JOIN plan_viaje pl ON pl.id_plan = fr.id_plan
+  WHERE pl.nombre = 'Plan Lima - Arequipa' AND v.estado = 'PROGRAMADO'
+    AND v.inicio_utc > now() + interval '7 days'
+  ORDER BY v.inicio_utc LIMIT 1;
+
+  SELECT v.id_viaje INTO STRICT v_v2
+  FROM viaje v
+  JOIN frecuencia fr ON fr.id_frecuencia = v.id_frecuencia
+  JOIN plan_viaje pl ON pl.id_plan = fr.id_plan
+  WHERE pl.nombre = 'Plan Arequipa - Lima' AND v.estado = 'PROGRAMADO'
+    AND v.inicio_utc > v_ini + interval '3 days'
+  ORDER BY v.inicio_utc LIMIT 1;
+
+  INSERT INTO reserva (id_viajero, contacto_correo, contacto_telefono)
+  VALUES (v_viajero, 'viajero@example.com', '987654321') RETURNING id_reserva INTO v_res;
+  INSERT INTO pasajero (id_reserva, id_viajero, tipo_documento, numero_documento, nombres, apellidos,
+                        fecha_nacimiento, correo_electronico, telefono)
+  VALUES (v_res, v_viajero, 'DNI', '72345678', 'Andrea', 'Torres Salazar', DATE '1998-05-14',
+          'viajero@example.com', '987654321') RETURNING id_pasajero INTO v_pas1;
+  -- Lima (pos 1) -> Nazca (pos 3) en la ruta Lima - Arequipa
+  PERFORM fn_crear_boleto(v_res, v_pas1, v_v1, 1, 3, '2B5', 1, 'IDA'::sentido_trayecto);
+  -- Nazca (pos 2) -> Lima (pos 4) en la ruta Arequipa - Lima
+  PERFORM fn_crear_boleto(v_res, v_pas1, v_v2, 2, 4, '2B5', 2, 'VUELTA'::sentido_trayecto);
+  SELECT COALESCE(SUM(precio_total), 0) INTO v_monto FROM boleto WHERE id_reserva = v_res;
+  INSERT INTO pago (id_reserva, monto, moneda, metodo_pago, estado, codigo_transaccion, pagado_en)
+  VALUES (v_res, v_monto, 'PEN', 'TARJETA', 'PAGADO', 'TRX-20261109-0002', now());
+
+  -- ===== R3: con escala Lima -> Arequipa (bus doble piso) + Arequipa -> Tacna (bus un piso) =====
+  SELECT v.id_viaje INTO STRICT v_v1
+  FROM viaje v
+  JOIN frecuencia fr ON fr.id_frecuencia = v.id_frecuencia
+  JOIN plan_viaje pl ON pl.id_plan = fr.id_plan
+  WHERE pl.nombre = 'Plan Lima - Arequipa' AND v.estado = 'PROGRAMADO'
+    AND v.inicio_utc > now() + interval '9 days'
+  ORDER BY v.inicio_utc LIMIT 1;
+  SELECT llegada_estimada_actual INTO STRICT v_arr
+  FROM viaje_parada WHERE id_viaje = v_v1 AND posicion = 4;
+
+  -- primer viaje Arequipa - Tacna que sale al menos 1 hora después de llegar a Arequipa
+  SELECT v.id_viaje INTO STRICT v_v2
+  FROM viaje v
+  JOIN frecuencia fr ON fr.id_frecuencia = v.id_frecuencia
+  JOIN plan_viaje pl ON pl.id_plan = fr.id_plan
+  JOIN viaje_parada vp ON vp.id_viaje = v.id_viaje AND vp.posicion = 1
+  WHERE pl.nombre = 'Plan Arequipa - Tacna' AND v.estado = 'PROGRAMADO'
+    AND vp.salida_estimada_actual >= v_arr + interval '1 hour'
+  ORDER BY v.inicio_utc LIMIT 1;
+
+  INSERT INTO reserva (id_viajero, contacto_correo, contacto_telefono)
+  VALUES (v_viajero, 'viajero@example.com', '987654321') RETURNING id_reserva INTO v_res;
+  INSERT INTO pasajero (id_reserva, id_viajero, tipo_documento, numero_documento, nombres, apellidos,
+                        fecha_nacimiento, correo_electronico, telefono)
+  VALUES (v_res, v_viajero, 'DNI', '72345678', 'Andrea', 'Torres Salazar', DATE '1998-05-14',
+          'viajero@example.com', '987654321') RETURNING id_pasajero INTO v_pas1;
+  PERFORM fn_crear_boleto(v_res, v_pas1, v_v1, 1, 4, '2C2', 1, 'IDA'::sentido_trayecto);
+  PERFORM fn_crear_boleto(v_res, v_pas1, v_v2, 1, 3, '1C4', 2, 'IDA'::sentido_trayecto);
+  SELECT COALESCE(SUM(precio_total), 0) INTO v_monto FROM boleto WHERE id_reserva = v_res;
+  INSERT INTO pago (id_reserva, monto, moneda, metodo_pago, estado, codigo_transaccion, pagado_en)
+  VALUES (v_res, v_monto, 'PEN', 'PLIN', 'PAGADO', 'PLIN-20261109-0003', now());
+
+  -- ===== R4: Tacna -> Arica, pagada y luego cancelada por el viajero =====
+  SELECT v.id_viaje INTO STRICT v_v1
+  FROM viaje v
+  JOIN frecuencia fr ON fr.id_frecuencia = v.id_frecuencia
+  JOIN plan_viaje pl ON pl.id_plan = fr.id_plan
+  WHERE pl.nombre = 'Plan Tacna - Arica' AND v.estado = 'PROGRAMADO'
+    AND v.inicio_utc > now() + interval '3 days'
+  ORDER BY v.inicio_utc LIMIT 1;
+
+  INSERT INTO reserva (id_viajero, contacto_correo, contacto_telefono)
+  VALUES (v_viajero, 'viajero@example.com', '987654321') RETURNING id_reserva INTO v_res;
+  INSERT INTO pasajero (id_reserva, id_viajero, tipo_documento, numero_documento, nombres, apellidos,
+                        fecha_nacimiento, correo_electronico, telefono)
+  VALUES (v_res, v_viajero, 'DNI', '72345678', 'Andrea', 'Torres Salazar', DATE '1998-05-14',
+          'viajero@example.com', '987654321') RETURNING id_pasajero INTO v_pas1;
+  PERFORM fn_crear_boleto(v_res, v_pas1, v_v1, 1, 2, '1A1');
+  SELECT COALESCE(SUM(precio_total), 0) INTO v_monto FROM boleto WHERE id_reserva = v_res;
+  INSERT INTO pago (id_reserva, monto, moneda, metodo_pago, estado, codigo_transaccion, pagado_en)
+  VALUES (v_res, v_monto, 'PEN', 'YAPE', 'PAGADO', 'YAPE-20261109-0004', now());
+  PERFORM fn_cancelar_reserva(v_res, 'Cambio de planes personales', v_viajero);
+
+  -- ===== R5: Cusco -> La Paz (internacional), un pasajero con pasaporte =====
+  SELECT v.id_viaje INTO STRICT v_v1
+  FROM viaje v
+  JOIN frecuencia fr ON fr.id_frecuencia = v.id_frecuencia
+  JOIN plan_viaje pl ON pl.id_plan = fr.id_plan
+  WHERE pl.nombre = 'Plan Cusco - La Paz' AND v.estado = 'PROGRAMADO'
+    AND v.inicio_utc > now() + interval '12 days'
+  ORDER BY v.inicio_utc LIMIT 1;
+
+  INSERT INTO reserva (id_viajero, contacto_correo, contacto_telefono)
+  VALUES (v_viajero, 'viajero@example.com', '987654321') RETURNING id_reserva INTO v_res;
+  INSERT INTO pasajero (id_reserva, id_viajero, tipo_documento, numero_documento, nombres, apellidos,
+                        fecha_nacimiento, correo_electronico, telefono)
+  VALUES (v_res, v_viajero, 'DNI', '72345678', 'Andrea', 'Torres Salazar', DATE '1998-05-14',
+          'viajero@example.com', '987654321') RETURNING id_pasajero INTO v_pas1;
+  INSERT INTO pasajero (id_reserva, tipo_documento, numero_documento, nombres, apellidos,
+                        fecha_nacimiento, correo_electronico)
+  VALUES (v_res, 'PASAPORTE', 'X1234567', 'Marie', 'Dubois', DATE '1995-01-25', 'marie.dubois@example.com')
+  RETURNING id_pasajero INTO v_pas2;
+  PERFORM fn_crear_boleto(v_res, v_pas1, v_v1, 1, 3, '1A2');
+  PERFORM fn_crear_boleto(v_res, v_pas2, v_v1, 1, 3, '1B2');
+  SELECT COALESCE(SUM(precio_total), 0) INTO v_monto FROM boleto WHERE id_reserva = v_res;
+  INSERT INTO pago (id_reserva, monto, moneda, metodo_pago, estado, codigo_transaccion, pagado_en)
+  VALUES (v_res, v_monto, 'PEN', 'TRANSFERENCIA', 'PAGADO', 'TRF-20261109-0005', now());
+END $$;
 
 COMMIT;
-
--- ---------- Verificación (debe dar: 21 / 21 / 21 / 63 / 20 / 15) ----------
-SELECT 'administrador (seed)' AS tabla, count(*) FROM administrador a JOIN auth.users u ON u.id = a.id_auth WHERE u.raw_app_meta_data->>'seed' = 'true'
-UNION ALL SELECT 'empresa', count(*) FROM empresa
-UNION ALL SELECT 'viajero', count(*) FROM viajero
-UNION ALL SELECT 'auth.users (seed)', count(*) FROM auth.users WHERE raw_app_meta_data->>'seed' = 'true'
-UNION ALL SELECT 'bus', count(*) FROM bus
-UNION ALL SELECT 'boleto', count(*) FROM boleto;
