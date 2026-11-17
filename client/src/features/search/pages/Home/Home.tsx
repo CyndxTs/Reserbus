@@ -4,6 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { Formik, Form, Field, ErrorMessage, FormikHelpers } from 'formik';
 import * as Yup from 'yup';
 import axios from 'axios';
+import AcercaDeSection from '../../../static/components/AcercaDeSection';
+import ContactoSection from '../../../static/components/ContactoSection';
 import Header from '../../../../components/layout/Header/Header';
 
 function Home() {
@@ -61,12 +63,7 @@ function Home() {
   return (
     <div>
       {/* componente Header */}
-      <Header
-        navOptions={[
-          { label: 'Contacto', path: '/contacto' },
-          { label: 'Acerca de nosotros', path: '/acerca-de' }
-        ]}
-      />
+      <Header />
       {/* Slogan */}
       <div className="mt-5 p-5">
         <div className="text-[72px] font-bold text-brand">
@@ -155,6 +152,9 @@ function Home() {
           </div>
         </div>
       </div>
+
+      <AcercaDeSection />
+      <ContactoSection />
     </div>
   );
 }

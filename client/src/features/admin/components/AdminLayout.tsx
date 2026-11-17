@@ -13,12 +13,7 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
 
   return (
     <div className="flex h-screen flex-col">
-      <Header
-        navOptions={[
-          { label: 'Contacto', path: '/contacto' },
-          { label: 'Acerca de nosotros', path: '/acerca-de' },
-        ]}
-      />
+      <Header />
       <aside className="fixed left-0 top-[80px] mt-7 h-[calc(100%-80px)] w-20 border-r border-[#eee] bg-white pt-2">
         <ul className="my-4 list-none p-0 text-center">
           <li className="cursor-pointer py-4 text-[0.85rem] font-bold text-brand">

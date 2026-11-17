@@ -1,17 +1,9 @@
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import ViajeDetalle from '../../../booking/components/ViajeDetalle';
-import { ViajeReserva, codigoReserva, fechaHora } from '../../../booking/utils/ReservaUtil';
+import { useState } from 'react';
 import { Formik, Form, Field, ErrorMessage, FormikHelpers } from 'formik';
 import * as Yup from 'yup';
-import axios from 'axios';
 import Header from '../../../../components/layout/Header/Header';
 import { useClient, Viajero } from '../../../auth/ClientContext';
-
-const navOptions = [
-  { label: 'Contacto', path: '/contacto' },
-  { label: 'Acerca de nosotros', path: '/acerca-de' },
-];
+import { actualizarPerfil, eliminarCuenta } from '../../services/CuentaService';
 
 interface Values {
   nombres: string;
@@ -31,33 +23,24 @@ const input = 'w-full rounded-xl border-2 border-[#ccc] p-3';
 const boton =
   'cursor-pointer rounded-lg border-0 bg-brand px-6 py-3 text-[16px] text-white disabled:cursor-not-allowed disabled:bg-[#bda8f9]';
 
-// Ruta: /MyAccount (solo VIAJERO). Perfil editable + acceso para crear/cambiar contraseña.
+// Ruta: /mi-cuenta (solo VIAJERO). Gestión de la cuenta: datos, contraseña y eliminación.
 function MyAccount() {
   const { client, sendPasswordReset, refreshProfile } = useClient();
   const viajero = client as Viajero;
-  const navigate = useNavigate();
-  const [viajes, setViajes] = useState<ViajeReserva[] | null>(null);
-  const [abierto, setAbierto] = useState<number | null>(null);
-  useEffect(() => {
-    axios.get<ViajeReserva[]>('/api/viajes/mios').then((r) => setViajes(r.data)).catch(() => setViajes([]));
-  }, []);
   const [mensaje, setMensaje] = useState<{ tipo: 'ok' | 'error'; texto: string } | null>(null);
   const [avisoPass, setAvisoPass] = useState<string | null>(null);
+  const [avisoEliminar, setAvisoEliminar] = useState<string | null>(null);
 
   const handleSubmit = async (values: Values, { setSubmitting }: FormikHelpers<Values>) => {
     setMensaje(null);
-    try {
-      await axios.put('/api/viajeros/me', {
-        nombres: values.nombres.trim(),
-        apellidos: values.apellidos.trim(),
-      });
+    const res = await actualizarPerfil({ nombres: values.nombres.trim(), apellidos: values.apellidos.trim() });
+    if (res.ok) {
       await refreshProfile();
       setMensaje({ tipo: 'ok', texto: 'Datos actualizados.' });
-    } catch {
-      setMensaje({ tipo: 'error', texto: 'No se pudo guardar. Intenta de nuevo.' });
-    } finally {
-      setSubmitting(false);
+    } else {
+      setMensaje({ tipo: 'error', texto: res.mensaje ?? 'No se pudo guardar.' });
     }
+    setSubmitting(false);
   };
 
   // Sirve igual para quien entró con Google y quiere definir una contraseña
@@ -68,9 +51,15 @@ function MyAccount() {
       : res.error ?? 'No se pudo enviar el correo.');
   };
 
+  const handleEliminar = async () => {
+    if (!window.confirm('¿Seguro que quieres eliminar tu cuenta? Esta acción no se puede deshacer.')) return;
+    const res = await eliminarCuenta();
+    setAvisoEliminar(res.mensaje ?? null);
+  };
+
   return (
     <div>
-      <Header navOptions={navOptions} />
+      <Header />
       <main className="mx-auto max-w-[760px] px-6 py-10 text-left">
         <h1 className="mb-8 text-[40px] font-bold text-brand">Mi cuenta</h1>
 
@@ -79,10 +68,7 @@ function MyAccount() {
           <p className="mb-4 text-[#6a6a6a]">Correo: <strong>{viajero.correo_electronico}</strong></p>
           <Formik<Values>
             enableReinitialize
-            initialValues={{
-              nombres: viajero.nombres ?? '',
-              apellidos: viajero.apellidos ?? '',
-            }}
+            initialValues={{ nombres: viajero.nombres ?? '', apellidos: viajero.apellidos ?? '' }}
             validationSchema={Schema}
             onSubmit={handleSubmit}
           >
@@ -116,25 +102,16 @@ function MyAccount() {
           {avisoPass && <p className="mt-3 text-[#444]">{avisoPass}</p>}
         </section>
 
-        <section className={tarjeta}>
-          <h2 className={subtitulo}>Mis viajes</h2>
-          {viajes === null ? <p className="text-[#6a6a6a]">Cargando…</p>
-            : viajes.length === 0 ? <p className="text-[#6a6a6a]">Aún no tienes viajes reservados.</p>
-            : viajes.map((v) => (
-              <div key={v.id} className="mb-3 rounded-xl border border-[#ddd] p-4">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div>
-                    <div className="font-bold text-brand">{codigoReserva(v.id)} <span className="ml-2 text-[12px] font-semibold text-[#555]">{v.estado}</span></div>
-                    <div className="text-[14px] text-[#444]">{v.tramos[0]?.origen} → {v.tramos[v.tramos.length - 1]?.destino} · {v.tramos[0] && fechaHora(v.tramos[0].salida_estimada)}</div>
-                  </div>
-                  <div className="flex gap-2">
-                    <button className="cursor-pointer rounded-lg border-[1.5px] border-brand bg-white px-4 py-1 text-brand" onClick={() => setAbierto(abierto === v.id ? null : v.id)}>{abierto === v.id ? 'Ocultar' : 'Ver detalle'}</button>
-                    {v.estado === 'PENDIENTE' && <button className="cursor-pointer rounded-lg border-0 bg-brand px-4 py-1 text-white" onClick={() => navigate(`/resumen/${v.id}`)}>Continuar</button>}
-                  </div>
-                </div>
-                {abierto === v.id && <div className="mt-4"><ViajeDetalle viaje={v} /></div>}
-              </div>
-            ))}
+        <section className={`${tarjeta} border-red-300`}>
+          <h2 className="mb-4 text-[24px] font-bold text-red-600">Eliminar cuenta</h2>
+          <p className="mb-4 text-[#6a6a6a]">Se borrará tu cuenta y tus datos personales. Esta acción no se puede deshacer.</p>
+          <button
+            className="cursor-pointer rounded-lg border-[1.5px] border-red-600 bg-white px-6 py-3 text-[16px] text-red-600 hover:bg-red-50"
+            onClick={handleEliminar}
+          >
+            Eliminar mi cuenta
+          </button>
+          {avisoEliminar && <p className="mt-3 rounded-lg bg-[#fff8e1] p-3 text-[#6a5200]">{avisoEliminar}</p>}
         </section>
       </main>
     </div>

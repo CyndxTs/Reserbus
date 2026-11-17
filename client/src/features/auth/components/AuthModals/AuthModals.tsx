@@ -75,7 +75,7 @@ const Frame = ({ onClose, adOnLeft, illustration, children }: FrameProps) => {
     </div>
   );
   return (
-    <div>
+    <>
       <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/60" onClick={onClose}>
         <div
           className="relative flex h-auto min-h-[500px] w-[800px] max-w-[90%] overflow-hidden rounded-2xl bg-white"
@@ -87,7 +87,7 @@ const Frame = ({ onClose, adOnLeft, illustration, children }: FrameProps) => {
           {!adOnLeft && ad}
         </div>
       </div>
-    </div>
+    </>
   );
 };
 

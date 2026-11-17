@@ -75,12 +75,7 @@ function SearchResults() {
 
   return (
     <div>
-      <Header
-        navOptions={[
-          { label: 'Contacto', path: '/contacto' },
-          { label: 'Acerca de nosotros', path: '/acerca-de' }
-        ]}
-      />
+      <Header />
       {/* Barra de pasos */}
       <div className="mb-4 mt-6 flex justify-center gap-10">
         <div className="border-b-[3px] border-brand text-center font-bold text-brand">

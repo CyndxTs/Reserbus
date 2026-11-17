@@ -1342,12 +1342,7 @@ function EmpresaHome() {
 
   return (
     <div className="bg-[#f8fafc]">
-      <Header
-        navOptions={[
-          { label: 'Contacto', path: '/contacto' },
-          { label: 'Acerca de nosotros', path: '/acerca-de' }
-        ]}
-      />
+      <Header />
       <aside className="fixed left-0 top-[100px] z-0 h-[calc(100vh-70px)] w-[200px] border-r border-[#e5e7eb] bg-white">
         <nav className="flex flex-col gap-1 p-4">
           <button 

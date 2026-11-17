@@ -55,7 +55,7 @@ function Resumen() {
 
   return (
     <div>
-      <Header navOptions={[{ label: 'Contacto', path: '/contacto' }, { label: 'Acerca de nosotros', path: '/acerca-de' }]} />
+      <Header />
       <ReservaSteps paso={3} />
       <main className="mx-auto max-w-[760px] px-6 pb-10">
         <h1 className="mb-2 text-[32px] font-bold text-brand">Resumen de tu compra</h1>

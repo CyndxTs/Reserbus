@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Header from '../../../../components/layout/Header/Header';
 import AuthModals, { AuthMode } from '../../../auth/components/AuthModals/AuthModals';
-import { useClient } from '../../../auth/ClientContext';
+import { useClient, Viajero } from '../../../auth/ClientContext';
 import { Itinerario, LocationState, SearchParams } from '../../../search/utils/BuscarViajeUtil';
 import ReservaSteps from '../../components/ReservaSteps';
 import { MapaAsientos, PasajeroForm, TipoDocumento, mensajeError, soles } from '../../utils/ReservaUtil';
@@ -26,7 +26,8 @@ function leerBorrador(state: Partial<LocationState> | null): { it: Itinerario; p
 function Reserva() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { clientType, loading } = useClient();
+  const { client, clientType, loading } = useClient();
+  const viajero = clientType === 'VIAJERO' ? (client as Viajero) : null;
   const borrador = useMemo(() => leerBorrador(location.state as Partial<LocationState> | null), [location.state]);
   const it = borrador?.it ?? null;
   const ids = useMemo(() => (it?.tramos_programados ?? []).map(String), [it]);
@@ -35,6 +36,10 @@ function Reserva() {
   const [pasajeros, setPasajeros] = useState<PasajeroForm[]>(() =>
     Array.from({ length: Math.min(borrador?.params.pasajeros || 1, MAX_PASAJEROS) }, vacio));
   const [sel, setSel] = useState<Record<string, Record<number, string>>>({});   // sel[idTP][idxPasajero] = "12A"
+  // El pasajero #1 es siempre el viajero logeado: sus datos se cargan solos y no se editan aquí
+  useEffect(() => {
+    if (viajero) setPasajeros((ps) => ps.map((p, i) => (i === 0 ? { ...p, nombres: viajero.nombres ?? '', apellidos: viajero.apellidos ?? '' } : p)));
+  }, [viajero?.id]);   // eslint-disable-line react-hooks/exhaustive-deps
   const [activo, setActivo] = useState(0);
   const [tramo, setTramo] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -52,12 +57,13 @@ function Reserva() {
 
   if (!it || !borrador) {
     return (
-      <div><Header navOptions={[]} />
+      <div><Header />
         <p className="mt-10">No hay una búsqueda activa. <button className="cursor-pointer text-brand underline" onClick={() => navigate('/')}>Volver al inicio</button></p>
       </div>
     );
   }
 
+  const bloqueado = (i: number, c: 'nombres' | 'apellidos') => i === 0 && !!viajero && !!(viajero[c] ?? '').trim();
   const seccionDe = (id: string) => it.secciones.find((s) => s.tramos_programados.map(String).includes(id));
   const etiquetaTramo = (id: string) => {
     const s = seccionDe(id);
@@ -126,7 +132,9 @@ function Reserva() {
       const { data } = await axios.post('/api/viajes', {
         tramos_programados: ids.map(Number),
         pasajeros: pasajeros.map((p, i) => ({
-          ...p, nombres: p.nombres.trim(), apellidos: p.apellidos.trim(),
+          ...p,
+          nombres: (i === 0 && viajero ? viajero.nombres || p.nombres : p.nombres).trim(),
+          apellidos: (i === 0 && viajero ? viajero.apellidos || p.apellidos : p.apellidos).trim(),
           asientos: Object.fromEntries(ids.map((id) => [id, sel[id][i]])),
         })),
       });
@@ -144,7 +152,7 @@ function Reserva() {
 
   return (
     <div>
-      <Header navOptions={[{ label: 'Contacto', path: '/contacto' }, { label: 'Acerca de nosotros', path: '/acerca-de' }]} />
+      <Header />
       <ReservaSteps paso={2} />
       <p className="my-2 text-[#444]"><strong>Ruta:</strong> {borrador.params.origen} → {borrador.params.destino} · {borrador.params.fecha_salida}</p>
 
@@ -156,12 +164,12 @@ function Reserva() {
             <div key={i} onClick={() => setActivo(i)}
               className={`mb-3 cursor-pointer rounded-2xl border-2 bg-white p-4 ${activo === i ? 'border-brand' : 'border-[#ddd]'}`}>
               <div className="mb-2 flex items-center justify-between font-bold">
-                <span>Pasajero {i + 1}{activo === i && <span className="ml-2 text-[12px] font-normal text-brand">(eligiendo asiento)</span>}</span>
-                {pasajeros.length > 1 && <button type="button" className="cursor-pointer border-0 bg-transparent text-[13px] text-red-600" onClick={(e) => { e.stopPropagation(); quitar(i); }}>Quitar</button>}
+                <span>Pasajero {i + 1}{i === 0 && viajero && <span className="ml-1 text-[12px] font-normal text-[#777]">(tú)</span>}{activo === i && <span className="ml-2 text-[12px] font-normal text-brand">(eligiendo asiento)</span>}</span>
+                {pasajeros.length > 1 && !(i === 0 && viajero) && <button type="button" className="cursor-pointer border-0 bg-transparent text-[13px] text-red-600" onClick={(e) => { e.stopPropagation(); quitar(i); }}>Quitar</button>}
               </div>
               <div className="grid grid-cols-2 gap-2">
-                <input className={campo} placeholder="Nombres" value={p.nombres} onChange={(e) => cambiar(i, 'nombres', e.target.value)} />
-                <input className={campo} placeholder="Apellidos" value={p.apellidos} onChange={(e) => cambiar(i, 'apellidos', e.target.value)} />
+                <input className={`${campo} ${bloqueado(i, 'nombres') ? 'bg-[#f3f3f3] text-[#777]' : ''}`} disabled={bloqueado(i, 'nombres')} placeholder="Nombres" value={p.nombres} onChange={(e) => cambiar(i, 'nombres', e.target.value)} />
+                <input className={`${campo} ${bloqueado(i, 'apellidos') ? 'bg-[#f3f3f3] text-[#777]' : ''}`} disabled={bloqueado(i, 'apellidos')} placeholder="Apellidos" value={p.apellidos} onChange={(e) => cambiar(i, 'apellidos', e.target.value)} />
                 <select className={campo} value={p.tipo_documento} onChange={(e) => cambiar(i, 'tipo_documento', e.target.value as TipoDocumento)}>
                   <option value="DNI">DNI</option><option value="CE">CE</option><option value="PASAPORTE">Pasaporte</option>
                 </select>

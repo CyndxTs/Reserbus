@@ -21,16 +21,10 @@ function ReservaConfirmada() {
   }, [id, navigate]);
   useEffect(() => { cargar(); }, [cargar]);
 
-  const cancelar = async () => {
-    if (!window.confirm('¿Cancelar la reserva completa? Se liberarán los asientos.')) return;
-    try { await axios.post(`/api/viajes/${id}/cancelar`); cargar(); }
-    catch (e) { setError(mensajeError(e)); }
-  };
-
   const ok = viaje?.estado === 'CONFIRMADO';
   return (
     <div>
-      <Header navOptions={[{ label: 'Contacto', path: '/contacto' }, { label: 'Acerca de nosotros', path: '/acerca-de' }]} />
+      <Header />
       <main className="mx-auto max-w-[760px] px-6 py-8">
         {!viaje ? <p>{error ?? 'Cargando…'}</p> : (
           <>
@@ -48,9 +42,8 @@ function ReservaConfirmada() {
             <ViajeDetalle viaje={viaje} />
             {error && <p className="mb-3 font-bold text-red-600">{error}</p>}
             <div className="flex justify-center gap-4">
-              <button className="cursor-pointer rounded-lg border-[1.5px] border-brand bg-white px-6 py-3 text-brand" onClick={() => navigate('/MyAccount')}>Mis viajes</button>
+              <button className="cursor-pointer rounded-lg border-[1.5px] border-brand bg-white px-6 py-3 text-brand" onClick={() => navigate('/mis-viajes')}>Mis viajes</button>
               <button className="cursor-pointer rounded-lg border-0 bg-brand px-6 py-3 text-white" onClick={() => navigate('/')}>Inicio</button>
-              {ok && <button className="cursor-pointer rounded-lg border-[1.5px] border-red-600 bg-white px-6 py-3 text-red-600" onClick={cancelar}>Cancelar reserva</button>}
             </div>
           </>
         )}
