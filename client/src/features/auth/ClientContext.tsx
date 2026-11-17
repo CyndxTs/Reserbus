@@ -6,45 +6,43 @@ import { Session } from '@supabase/supabase-js';
 import { supabase } from '../../lib/supabase';
 import { API_URL } from '../../lib/api';
 
+// Perfiles tal como los devuelve el server (GET /api/auth/me). El correo NO está en la BD del
+// proyecto (vive en auth.users), así que se agrega aquí desde la sesión de Supabase.
 export interface Viajero {
-  id_viajero: number;
-  id_auth?: string;
+  id: number;
+  auth_id: string;
   correo_electronico: string;
   nombres: string;
   apellidos: string;
-  telefono?: string;
-  fecha_nacimiento?: string;
-  avatar_url?: string;
-  esta_habilitado: boolean;
 }
+// Trabajador de una empresa (ADMINISTRATIVO -> rol EMPRESA, CHOFER -> rol CHOFER)
 export interface Empresa {
+  id: number;
+  auth_id: string;
   id_empresa: number;
-  id_auth?: string;
+  tipo: 'CHOFER' | 'ADMINISTRATIVO';
   correo_electronico: string;
-  razon_social?: string;
-  ruc?: string;
-  descripcion?: string;
-  logo_url?: string;
-  esta_habilitado: boolean;
+  nombres: string;
+  apellidos: string;
+  activo: boolean;
+  Empresa?: { id: number; nombre: string; activa: boolean };
 }
 export interface Administrador {
-  id_administrador: number;
-  id_auth?: string;
+  id: number;
+  auth_id: string;
   correo_electronico: string;
   nombres: string;
   apellidos: string;
-  foto_url?: string;
-  fecha_nacimiento?: string;
-  esta_habilitado: boolean;
 }
 
 type ClientData = Viajero | Administrador | Empresa;
-export type ClientType = 'VIAJERO' | 'EMPRESA' | 'ADMINISTRADOR';
+export type ClientType = 'VIAJERO' | 'EMPRESA' | 'CHOFER' | 'ADMINISTRADOR';
 
-// El server devuelve rol ADMIN | EMPRESA | VIAJERO
+// El server devuelve rol ADMIN | EMPRESA | CHOFER | VIAJERO
 const ROL_A_TIPO: Record<string, ClientType> = {
   ADMIN: 'ADMINISTRADOR',
   EMPRESA: 'EMPRESA',
+  CHOFER: 'CHOFER',
   VIAJERO: 'VIAJERO',
 };
 
@@ -68,11 +66,23 @@ interface ClientContextType {
 
 const ClientContext = createContext<ClientContextType | undefined>(undefined);
 
-async function fetchPerfil(accessToken: string): Promise<Perfil> {
-  const { data } = await axios.get(`${API_URL}/api/auth/me`, {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
-  return { client: data.perfil as ClientData, clientType: ROL_A_TIPO[data.rol] ?? 'VIAJERO' };
+// Pide el perfil al server. Si la cuenta de Supabase (correo o Google) aún no tiene perfil,
+// el server responde 403 SIN_PERFIL y se crea el de VIAJERO con POST /api/auth/registro.
+async function fetchPerfil(session: Session): Promise<Perfil> {
+  const headers = { Authorization: `Bearer ${session.access_token}` };
+  let data;
+  try {
+    ({ data } = await axios.get(`${API_URL}/api/auth/me`, { headers }));
+  } catch (e) {
+    const err = e as AxiosError<{ codigo?: string }>;
+    if (err.response?.status !== 403 || err.response.data?.codigo !== 'SIN_PERFIL') throw e;
+    // Correo+contraseña: los nombres vienen del formulario (metadata). Google: el server los deduce del token.
+    const meta = session.user.user_metadata ?? {};
+    const body = meta.nombres ? { nombres: meta.nombres, apellidos: meta.apellidos ?? '' } : {};
+    ({ data } = await axios.post(`${API_URL}/api/auth/registro`, body, { headers }));
+  }
+  const client = { ...data.perfil, correo_electronico: session.user.email ?? '' } as ClientData;
+  return { client, clientType: ROL_A_TIPO[data.rol] ?? 'VIAJERO' };
 }
 
 const statusDe = (e: unknown) => (e as AxiosError).response?.status;
@@ -88,7 +98,7 @@ export const ClientProvider = ({ children }: { children: ReactNode }) => {
   // Evita pedir /api/auth/me dos veces para el mismo token (login manual + listener, StrictMode)
   const loadProfile = useCallback((s: Session) => {
     if (cache.current?.token === s.access_token) return cache.current.promise;
-    const promise = fetchPerfil(s.access_token);
+    const promise = fetchPerfil(s);
     cache.current = { token: s.access_token, promise };
     promise.catch(() => {
       if (cache.current?.promise === promise) cache.current = null;
@@ -205,7 +215,7 @@ export const ClientProvider = ({ children }: { children: ReactNode }) => {
   const refreshProfile = async () => {
     const { data } = await supabase.auth.getSession();
     if (!data.session) return;
-    const p = await fetchPerfil(data.session.access_token);
+    const p = await fetchPerfil(data.session);
     cache.current = null;
     setClient(p.client);
     setClientType(p.clientType);

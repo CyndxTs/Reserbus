@@ -1,5 +1,5 @@
-import { useClient } from '../../../auth/ClientContext';
-import { SearchValues } from '../../utils/BuscarViajeUtil';
+import { useEffect, useState } from 'react';
+import { SearchValues, Terminal } from '../../utils/BuscarViajeUtil';
 import { useNavigate } from 'react-router-dom';
 import { Formik, Form, Field, ErrorMessage, FormikHelpers } from 'formik';
 import * as Yup from 'yup';
@@ -8,6 +8,13 @@ import Header from '../../../../components/layout/Header/Header';
 
 function Home() {
   const navigate = useNavigate();
+  const [terminales, setTerminales] = useState<Terminal[]>([]);
+  const [errorBusqueda, setErrorBusqueda] = useState<string | null>(null);
+
+  useEffect(() => {
+    axios.get<Terminal[]>('/api/terminales').then((r) => setTerminales(r.data)).catch(() => setTerminales([]));
+  }, []);
+  const nombreTerminal = (id: string) => terminales.find((t) => String(t.id) === id)?.nombre ?? id;
   const SearchSchema = Yup.object().shape({
     origen: Yup.string().required('Campo requerido'),
     destino: Yup.string().required('Campo requerido'),
@@ -27,26 +34,25 @@ function Home() {
   });
 
   const handleSearch = async (values: SearchValues, { setSubmitting, setFieldError }:FormikHelpers<SearchValues>) => {
-    console.log("Formulario enviado con valores:", values);
+    setErrorBusqueda(null);
     try {
-      const searchParams = {
-        origen: values.origen,
-        destino: values.destino,
-        fecha_salida: values.salida,
-        fecha_regreso: values.regreso || null,
-        pasajeros: values.pasajeros
-      };
-      const response = await axios.get('/api/viajes/buscar', { 
-        params: searchParams 
+      const { data } = await axios.get('/api/busqueda', {
+        params: { origen: values.origen, destino: values.destino, fecha: values.salida, pasajeros: values.pasajeros },
       });
-      navigate('/resultados', { 
-        state: { 
-          viajes: response.data.viajes,
-          parametros: searchParams
-        } 
+      navigate('/resultados', {
+        state: {
+          resultados: data.resultados,
+          parametros: {
+            origen: nombreTerminal(values.origen),
+            destino: nombreTerminal(values.destino),
+            fecha_salida: values.salida,
+            pasajeros: values.pasajeros,
+          },
+        },
       });
     } catch (e) {
       console.error('Error en la búsqueda:', e);
+      setErrorBusqueda('No se pudo realizar la búsqueda.');
     } finally {
       setSubmitting(false);
     }
@@ -87,12 +93,18 @@ function Home() {
       <Form className="mx-auto flex w-full max-w-[1250px] flex-wrap items-center gap-6 rounded-full bg-white px-8 py-[1.2rem] shadow-[0_2px_10px_rgba(0,0,0,0.08)]">
         <div className="relative flex min-h-[90px] flex-col items-start">
           <label htmlFor="origen" className="mb-[5px] text-[14px] font-medium text-[#333]">Origen</label>
-          <Field type="text" name="origen" placeholder="Agregue su origen..." className="min-w-[180px] rounded-xl border-2 border-[#ccc] p-3" />
+          <Field as="select" name="origen" className="min-w-[180px] rounded-xl border-2 border-[#ccc] p-3">
+            <option value="">Seleccione...</option>
+            {terminales.map((t) => <option key={t.id} value={t.id}>{t.nombre}</option>)}
+          </Field>
           <ErrorMessage name="origen" component="div" className="relative -mt-2 h-5 self-center text-[12px] font-bold text-red-600" />
         </div>
         <div className="relative flex min-h-[90px] flex-col items-start">
           <label htmlFor="destino" className="mb-[5px] text-[14px] font-medium text-[#333]">Destino</label>
-          <Field type="text" name="destino" placeholder="Agregue su destino..." className="min-w-[180px] rounded-xl border-2 border-[#ccc] p-3" />
+          <Field as="select" name="destino" className="min-w-[180px] rounded-xl border-2 border-[#ccc] p-3">
+            <option value="">Seleccione...</option>
+            {terminales.map((t) => <option key={t.id} value={t.id}>{t.nombre}</option>)}
+          </Field>
           <ErrorMessage name="destino" component="div" className="relative -mt-2 h-5 self-center text-[12px] font-bold text-red-600" />
         </div>
         <div className="relative flex min-h-[90px] flex-col items-start">
@@ -115,7 +127,8 @@ function Home() {
         </button>
       </Form>
       )}
-      </Formik>  
+      </Formik>
+      {errorBusqueda && <div className="mt-2 text-[14px] font-bold text-red-600">{errorBusqueda}</div>}
 
       {/* Features */}
       <div className="bg-white px-24 py-8">

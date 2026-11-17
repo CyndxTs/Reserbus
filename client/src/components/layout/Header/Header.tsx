@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useClient, Administrador, Empresa } from '../../../features/auth/ClientContext';
+import { useClient } from '../../../features/auth/ClientContext';
 import { useNavigate } from 'react-router-dom';
 import { formattedClientName } from '../../../features/auth/utils/ClientUtil';
 import AuthModals, { AuthMode } from '../../../features/auth/components/AuthModals/AuthModals';
@@ -92,12 +92,7 @@ const Header = ({ navOptions = [] }: HeaderProps) => {
             ) : (
               <>
                 <span className="text-brand">{formattedClientName(client)}</span>
-                {clientType === 'EMPRESA' && (
-                  <img src={(client as Empresa).logo_url || "/Icon_Account.svg"} alt="company-icon" className="h-[70px] w-[70px]" />
-                )}
-                {clientType === 'ADMINISTRADOR' && (
-                  <img src={(client as Administrador).foto_url || "/Icon_Account.svg"} alt="admin-icon" className="h-9 w-9" />
-                )}
+                <img src="/Icon_Account.svg" alt="icon-profile" className="h-9 w-9" />
               </>
             )}
           </button>

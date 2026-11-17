@@ -13,15 +13,11 @@ const navOptions = [
 interface Values {
   nombres: string;
   apellidos: string;
-  telefono: string;
-  fecha_nacimiento: string;
 }
 
 const Schema = Yup.object().shape({
   nombres: Yup.string().matches(/^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$/, 'Solo letras').required('Requerido'),
   apellidos: Yup.string().matches(/^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]*$/, 'Solo letras'),
-  telefono: Yup.string().matches(/^[0-9+\s-]{6,20}$/, 'Teléfono inválido').nullable(),
-  fecha_nacimiento: Yup.date().max(new Date(), 'Fecha inválida').nullable(),
 });
 
 const tarjeta = 'mb-8 rounded-[22px] border-[1.5px] border-[#bbb] bg-white p-6 shadow-[0_2px_8px_rgba(0,0,0,0.04)]';
@@ -45,8 +41,6 @@ function MyAccount() {
       await axios.put('/api/viajeros/me', {
         nombres: values.nombres.trim(),
         apellidos: values.apellidos.trim(),
-        telefono: values.telefono.trim() || null,
-        fecha_nacimiento: values.fecha_nacimiento || null,
       });
       await refreshProfile();
       setMensaje({ tipo: 'ok', texto: 'Datos actualizados.' });
@@ -79,8 +73,6 @@ function MyAccount() {
             initialValues={{
               nombres: viajero.nombres ?? '',
               apellidos: viajero.apellidos ?? '',
-              telefono: viajero.telefono ?? '',
-              fecha_nacimiento: viajero.fecha_nacimiento ?? '',
             }}
             validationSchema={Schema}
             onSubmit={handleSubmit}
@@ -94,14 +86,6 @@ function MyAccount() {
                 <div className="flex flex-col gap-1">
                   <div className={etiqueta}><label htmlFor="apellidos">Apellidos</label><ErrorMessage name="apellidos" component="div" className={errorCampo} /></div>
                   <Field id="apellidos" name="apellidos" className={input} />
-                </div>
-                <div className="flex flex-col gap-1">
-                  <div className={etiqueta}><label htmlFor="telefono">Teléfono</label><ErrorMessage name="telefono" component="div" className={errorCampo} /></div>
-                  <Field id="telefono" name="telefono" className={input} />
-                </div>
-                <div className="flex flex-col gap-1">
-                  <div className={etiqueta}><label htmlFor="fecha_nacimiento">Fecha de nacimiento</label><ErrorMessage name="fecha_nacimiento" component="div" className={errorCampo} /></div>
-                  <Field id="fecha_nacimiento" name="fecha_nacimiento" type="date" className={input} />
                 </div>
                 <div className="flex items-center gap-4 md:col-span-2">
                   <button type="submit" className={boton} disabled={!dirty || !isValid || isSubmitting}>Guardar cambios</button>

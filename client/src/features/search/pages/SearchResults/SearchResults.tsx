@@ -1,17 +1,13 @@
 import { useEffect, useState } from 'react';
-import { useClient } from '../../../auth/ClientContext';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import { addDays,format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Tarifa, Empresa, Ruta, Viaje, SearchParams, LocationState } from '../../utils/BuscarViajeUtil';
+import { Itinerario, SearchParams, LocationState } from '../../utils/BuscarViajeUtil';
 import Header from '../../../../components/layout/Header/Header';
 
 function SearchResults() {
-  const { client, clientType } = useClient();
-  const viajero = clientType === 'VIAJERO' ? client : null;
-  const navigate = useNavigate();
   const location = useLocation();
-  const [viajes, setViajes] = useState<Viaje[]>([]);
+  const [viajes, setViajes] = useState<Itinerario[]>([]);
   const [parametros, setParametros] = useState<SearchParams | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -47,8 +43,8 @@ function SearchResults() {
 
   useEffect(() => {
     const state = location.state as LocationState;
-    if (state && state.viajes && state.parametros) {
-      setViajes(state.viajes);
+    if (state && state.resultados && state.parametros) {
+      setViajes(state.resultados);
       setParametros(state.parametros);
       setLoading(false);
     } else {
@@ -57,22 +53,8 @@ function SearchResults() {
     }
   }, [location]);
 
-  // Formatea la hora de inicio (24h)
-  const getHoraInicio = (instante_abordaje: string) => {
-    if (!instante_abordaje) return "--:--";
-    const date = new Date(instante_abordaje);
-    return format(date, "HH:mm");
-  };
-
-  // Calcula la hora de llegada sumando minutos a instante_abordaje
-  const getHoraLlegada = (instante_abordaje: string, duracionMin: number) => {
-    if (!instante_abordaje || !duracionMin) return "--:--";
-    const inicio = new Date(instante_abordaje);
-    // Si duracionMin es 0 o negativo, muestra la misma hora de inicio
-    if (duracionMin <= 0) return format(inicio, "HH:mm");
-    const llegada = new Date(inicio.getTime() + duracionMin * 60000);
-    return format(llegada, "HH:mm");
-  };
+  // El server ya entrega la hora local del terminal: "YYYY-MM-DD HH:mm"
+  const hora = (local: string) => (local ? local.slice(11, 16) : '--:--');
 
   // Formatea la duración en horas y minutos
   const formatDuracion = (minutos: number) => {
@@ -82,21 +64,6 @@ function SearchResults() {
     return `${h}h ${m}m`;
   };
   
-  // Obtener el precio mínimo de las tarifas
-  const getPrecioMinimo = (tarifas: Tarifa[]) => {
-    if (!tarifas || tarifas.length === 0) return "No disponible";
-    
-    let minPrecio = Number.MAX_VALUE;
-    for (const tarifa of tarifas) {
-      if (tarifa.precio < minPrecio) {
-        minPrecio = tarifa.precio;
-      }
-    }
-    
-    return `S/ ${minPrecio.toFixed(2)}`;
-  };
-
-
   if (loading) {
     return <div>Cargando resultados...</div>;
   }
@@ -174,40 +141,46 @@ function SearchResults() {
             </div>
           </div>
           <div className="flex flex-col gap-4">
-            {viajes.map((viaje) => (
-              <div
-                className="mb-[1.2rem] flex flex-row items-center justify-between gap-8 rounded-[22px] border-[1.5px] border-[#bbb] bg-white px-8 py-[1.2rem] shadow-[0_2px_8px_rgba(0,0,0,0.04)]"
-                key={viaje.id_viaje}
-              >
-                <div className="flex flex-[1.2] flex-col gap-[0.2rem]">
-                  <div className="mb-2 text-[18px] font-bold text-brand">{viaje.empresa?.razon_social || 'Empresa'}</div>
-                  <div className="text-[14px] text-[#222]">Cama 160°/180°</div>
-                  <div className="cursor-pointer text-[13px] text-[#a678ff]">Ver detalles</div>
+            {viajes.map((it, i) => {
+              const primera = it.secciones[0];
+              const ultima = it.secciones[it.secciones.length - 1];
+              return (
+                <div
+                  className="mb-[1.2rem] flex flex-row items-center justify-between gap-8 rounded-[22px] border-[1.5px] border-[#bbb] bg-white px-8 py-[1.2rem] shadow-[0_2px_8px_rgba(0,0,0,0.04)]"
+                  key={it.tramos_programados.join('-') || i}
+                >
+                  <div className="flex flex-[1.2] flex-col gap-[0.2rem]">
+                    <div className="mb-2 text-[18px] font-bold text-brand">
+                      {[...new Set(it.secciones.map((s) => s.empresa))].join(' + ')}
+                    </div>
+                    <div className="text-[14px] text-[#222]">{primera.tipo_bus}</div>
+                    <div className="text-[13px] text-[#a678ff]">
+                      {it.trasbordos === 0 ? 'Directo' : `${it.trasbordos} trasbordo${it.trasbordos > 1 ? 's' : ''}`}
+                    </div>
+                  </div>
+                  <div className="flex flex-[2] items-center justify-center gap-10">
+                    <div className="text-center">
+                      <span className="text-[1.4rem] font-bold text-brand">{hora(it.salida_local)}</span>
+                      <div className="text-[13px] text-[#444]">{primera.origen}</div>
+                    </div>
+                    <div className="text-center text-[1.5rem] text-[#222]">
+                      <span>→</span>
+                      <div className="text-[14px] text-[#777]">{formatDuracion(it.duracion_min)}</div>
+                    </div>
+                    <div className="text-center">
+                      <span className="text-[1.4rem] font-bold text-brand">{hora(it.llegada_local)}</span>
+                      <div className="text-[13px] text-[#444]">{ultima.destino}</div>
+                    </div>
+                  </div>
+                  <div className="flex flex-[1.1] flex-col items-end gap-[0.3rem]">
+                    <div className="text-[13px] text-[#444]">Desde:</div>
+                    <div className="text-right text-[1.2rem] font-bold text-[#333]">S/ {it.precio_base.toFixed(2)}</div>
+                    <button className="mt-[0.2rem] cursor-pointer rounded-[18px] border-[1.5px] border-brand bg-white px-[18px] py-1 font-semibold text-brand transition-colors duration-200 hover:bg-brand hover:text-white">Ver asientos</button>
+                    <div className="text-[12px] text-[#888]">{it.libres} disponibles</div>
+                  </div>
                 </div>
-                <div className="flex flex-[2] items-center justify-center gap-10">
-                  <div className="text-center">
-                    <span className="text-[1.4rem] font-bold text-brand">{getHoraInicio(viaje.instante_abordaje)}</span>
-                    <div className="text-[13px] text-[#444]">{viaje.ruta?.origen}</div>
-                  </div>
-                  <div className="text-center text-[1.5rem] text-[#222]">
-                    <span>→</span>
-                    <div className="text-[14px] text-[#777]">{formatDuracion(viaje.duracion_estimada_minutos || 0)}</div>
-                  </div>
-                  <div className="text-center">
-                    <span className="text-[1.4rem] font-bold text-brand">{getHoraLlegada(viaje.instante_abordaje, viaje.duracion_estimada_minutos || 0)}</span>
-                    <div className="text-[13px] text-[#444]">{viaje.ruta?.destino}</div>
-                  </div>
-                </div>
-                <div className="flex flex-[1.1] flex-col items-end gap-[0.3rem]">
-                  <div className="text-[13px] text-[#444]">Desde:</div>
-                  <div className="text-right text-[1.2rem] font-bold text-[#333]">{getPrecioMinimo(viaje.tarifas)}</div>
-                  <button className="mt-[0.2rem] cursor-pointer rounded-[18px] border-[1.5px] border-brand bg-white px-[18px] py-1 font-semibold text-brand transition-colors duration-200 hover:bg-brand hover:text-white">Ver asientos</button>
-                  <div className="text-[12px] text-[#888]">
-                    {viaje.tarifas.length > 0 ? '20 disponibles' : 'No disponibles'}
-                  </div>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </section>
       </div>
