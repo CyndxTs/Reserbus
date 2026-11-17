@@ -110,7 +110,7 @@ const AuthModals = ({ mode, initialEmail, onClose, onSwitch }: AuthModalsProps) 
       close();
       if (res.clientType === 'EMPRESA') navigate('/empresa');
       else if (res.clientType === 'ADMINISTRADOR') navigate('/admin');
-      else navigate('/');
+      else if (!window.location.pathname.startsWith('/reservar')) navigate('/');
     } else {
       setFieldValue('password', '', false);
       setFieldError('email', res.error);

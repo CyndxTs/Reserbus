@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { addDays,format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Itinerario, SearchParams, LocationState } from '../../utils/BuscarViajeUtil';
@@ -7,6 +7,7 @@ import Header from '../../../../components/layout/Header/Header';
 
 function SearchResults() {
   const location = useLocation();
+  const navigate = useNavigate();
   const [viajes, setViajes] = useState<Itinerario[]>([]);
   const [parametros, setParametros] = useState<SearchParams | null>(null);
   const [loading, setLoading] = useState(true);
@@ -175,7 +176,7 @@ function SearchResults() {
                   <div className="flex flex-[1.1] flex-col items-end gap-[0.3rem]">
                     <div className="text-[13px] text-[#444]">Desde:</div>
                     <div className="text-right text-[1.2rem] font-bold text-[#333]">S/ {it.precio_base.toFixed(2)}</div>
-                    <button className="mt-[0.2rem] cursor-pointer rounded-[18px] border-[1.5px] border-brand bg-white px-[18px] py-1 font-semibold text-brand transition-colors duration-200 hover:bg-brand hover:text-white">Ver asientos</button>
+                    <button onClick={() => navigate('/reservar', { state: { itinerario: it, parametros } })} className="mt-[0.2rem] cursor-pointer rounded-[18px] border-[1.5px] border-brand bg-white px-[18px] py-1 font-semibold text-brand transition-colors duration-200 hover:bg-brand hover:text-white">Ver asientos</button>
                     <div className="text-[12px] text-[#888]">{it.libres} disponibles</div>
                   </div>
                 </div>

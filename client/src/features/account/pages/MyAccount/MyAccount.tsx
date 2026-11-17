@@ -1,4 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import ViajeDetalle from '../../../booking/components/ViajeDetalle';
+import { ViajeReserva, codigoReserva, fechaHora } from '../../../booking/utils/ReservaUtil';
 import { Formik, Form, Field, ErrorMessage, FormikHelpers } from 'formik';
 import * as Yup from 'yup';
 import axios from 'axios';
@@ -32,6 +35,12 @@ const boton =
 function MyAccount() {
   const { client, sendPasswordReset, refreshProfile } = useClient();
   const viajero = client as Viajero;
+  const navigate = useNavigate();
+  const [viajes, setViajes] = useState<ViajeReserva[] | null>(null);
+  const [abierto, setAbierto] = useState<number | null>(null);
+  useEffect(() => {
+    axios.get<ViajeReserva[]>('/api/viajes/mios').then((r) => setViajes(r.data)).catch(() => setViajes([]));
+  }, []);
   const [mensaje, setMensaje] = useState<{ tipo: 'ok' | 'error'; texto: string } | null>(null);
   const [avisoPass, setAvisoPass] = useState<string | null>(null);
 
@@ -109,8 +118,23 @@ function MyAccount() {
 
         <section className={tarjeta}>
           <h2 className={subtitulo}>Mis viajes</h2>
-          {/* TODO: listar reservas del viajero (GET /api/reservas/mias) cuando exista el flujo de reserva */}
-          <p className="text-[#6a6a6a]">Aún no tienes viajes reservados.</p>
+          {viajes === null ? <p className="text-[#6a6a6a]">Cargando…</p>
+            : viajes.length === 0 ? <p className="text-[#6a6a6a]">Aún no tienes viajes reservados.</p>
+            : viajes.map((v) => (
+              <div key={v.id} className="mb-3 rounded-xl border border-[#ddd] p-4">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <div className="font-bold text-brand">{codigoReserva(v.id)} <span className="ml-2 text-[12px] font-semibold text-[#555]">{v.estado}</span></div>
+                    <div className="text-[14px] text-[#444]">{v.tramos[0]?.origen} → {v.tramos[v.tramos.length - 1]?.destino} · {v.tramos[0] && fechaHora(v.tramos[0].salida_estimada)}</div>
+                  </div>
+                  <div className="flex gap-2">
+                    <button className="cursor-pointer rounded-lg border-[1.5px] border-brand bg-white px-4 py-1 text-brand" onClick={() => setAbierto(abierto === v.id ? null : v.id)}>{abierto === v.id ? 'Ocultar' : 'Ver detalle'}</button>
+                    {v.estado === 'PENDIENTE' && <button className="cursor-pointer rounded-lg border-0 bg-brand px-4 py-1 text-white" onClick={() => navigate(`/resumen/${v.id}`)}>Continuar</button>}
+                  </div>
+                </div>
+                {abierto === v.id && <div className="mt-4"><ViajeDetalle viaje={v} /></div>}
+              </div>
+            ))}
         </section>
       </main>
     </div>

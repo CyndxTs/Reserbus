@@ -50,5 +50,6 @@ export interface SearchParams {
 
 export interface LocationState {
   resultados: Itinerario[];
+  itinerario: Itinerario;      // el elegido en resultados (para /reservar)
   parametros: SearchParams;
 }

@@ -13,6 +13,9 @@ import Home from '../features/search/pages/Home/Home';
 import MyAccount from '../features/account/pages/MyAccount/MyAccount';
 import Contacto from '../features/static/pages/Contacto/Contacto';
 import AcercaDe from '../features/static/pages/AcercaDe/AcercaDe';
+import Reserva from '../features/booking/pages/Reserva/Reserva';
+import Resumen from '../features/booking/pages/Resumen/Resumen';
+import ReservaConfirmada from '../features/booking/pages/ReservaConfirmada/ReservaConfirmada';
 import NotFound from '../features/static/pages/NotFound/NotFound';
 
 function App() {
@@ -28,7 +31,11 @@ function App() {
             <Route path="/contacto" element={<Contacto />} />
             <Route path="/acerca-de" element={<AcercaDe />} />
 
+            <Route path="/reservar" element={<Reserva />} />
+
             {/* VIAJERO */}
+            <Route path="/resumen/:id" element={<ProtectedRoute roles={['VIAJERO']}><Resumen /></ProtectedRoute>} />
+            <Route path="/reserva/:id" element={<ProtectedRoute roles={['VIAJERO']}><ReservaConfirmada /></ProtectedRoute>} />
             <Route path="/MyAccount" element={<ProtectedRoute roles={['VIAJERO']}><MyAccount /></ProtectedRoute>} />
 
             {/* EMPRESA */}
