@@ -1,31 +1,6 @@
-module.exports = (sequelize, DataTypes) => {
-  const BusServicio = sequelize.define('BusServicio', {
-    id_bus: {
-      type: DataTypes.INTEGER,
-      primaryKey: true
-    },
-    id_servicio: {
-      type: DataTypes.INTEGER,
-      primaryKey: true
-    }
-  }, {
-    tableName: 'bus_servicio',
-    freezeTableName: true,
-    timestamps: false,
-    underscored: true
+const definir = require('../lib/modelo');
+module.exports = (sequelize, { INTEGER }) =>
+  definir(sequelize, 'BusServicio', 'bus_has_servicio', {
+    id_bus: { type: INTEGER, primaryKey: true },
+    id_servicio: { type: INTEGER, primaryKey: true },
   });
-
-  BusServicio.associate = (models) => {
-    BusServicio.belongsTo(models.Bus, {
-      foreignKey: 'id_bus',
-      onDelete: 'CASCADE'
-    });
-
-    BusServicio.belongsTo(models.Servicio, {
-      foreignKey: 'id_servicio',
-      onDelete: 'CASCADE'
-    });
-  };
-
-  return BusServicio;
-};

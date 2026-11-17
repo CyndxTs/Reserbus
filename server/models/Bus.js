@@ -1,67 +1,16 @@
-module.exports = (sequelize, DataTypes) => {
-  const Bus = sequelize.define('Bus', {
-    id_bus: {
-      type: DataTypes.INTEGER,
-      primaryKey: true,
-      autoIncrement: true
-    },
-    placa: {
-      type: DataTypes.STRING(10),
-      allowNull: false
-    },
-    marca: {
-      type: DataTypes.STRING(60),
-      allowNull: false
-    },
-    modelo: {
-      type: DataTypes.STRING(60),
-      allowNull: false
-    },
-    cantidad_pisos: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-      defaultValue: 1
-    },
-    id_empresa: {
-      type: DataTypes.INTEGER,
-      allowNull: false
-    },
-    esta_habilitado: {
-      type: DataTypes.BOOLEAN,
-      allowNull: false,
-      defaultValue: true
-    }
-  }, {
-    tableName: 'bus',
-    freezeTableName: true,
-    timestamps: false,
-    underscored: true
+const definir = require('../lib/modelo');
+module.exports = (sequelize, { INTEGER, STRING, BOOLEAN }) => {
+  const Bus = definir(sequelize, 'Bus', 'bus', {
+    id: { type: INTEGER, primaryKey: true, autoIncrement: true },
+    id_empresa: { type: INTEGER, allowNull: false },
+    id_tipo_bus: { type: INTEGER, allowNull: false },
+    placa: { type: STRING(10), allowNull: false, unique: true },
+    activo: { type: BOOLEAN, allowNull: false, defaultValue: true },
   });
-
-  Bus.associate = (models) => {
-    Bus.belongsTo(models.Empresa, {
-      foreignKey: 'id_empresa',
-      onDelete: 'CASCADE'
-    });
-
-    Bus.hasMany(models.Piso, {
-      foreignKey: 'id_bus',
-      onDelete: 'CASCADE'
-    });
-
-    Bus.hasMany(models.Viaje, {
-      foreignKey: 'id_bus',
-      onDelete: 'CASCADE'
-    });
-
-    Bus.belongsToMany(models.Servicio, {
-      through: models.BusServicio,
-      as: 'servicios',
-      foreignKey: 'id_bus',
-      otherKey: 'id_servicio',
-      onDelete: 'CASCADE'
-    });
+  Bus.associate = (m) => {
+    Bus.belongsTo(m.TipoBus, { foreignKey: 'id_tipo_bus' });
+    Bus.belongsTo(m.Empresa, { foreignKey: 'id_empresa' });
+    Bus.belongsToMany(m.Servicio, { through: m.BusServicio, as: 'servicios', foreignKey: 'id_bus', otherKey: 'id_servicio' });
   };
-
   return Bus;
 };

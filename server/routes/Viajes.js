@@ -1,109 +1,38 @@
 const express = require('express');
 const router = express.Router();
-const { Viaje, Ruta, Terminal, Empresa, Tarifa } = require('../models');
-const { Op, Sequelize } = require('sequelize');
-// TEST - SELECT ALL
-router.get('/', async (req, res) => {
-    const viajes = await Viaje.findAll();
-    res.json(viajes);
+const { requireAuth, requireRol } = require('../middleware/auth');
+const { ErrorHttp } = require('../lib/errores');
+const { expirarViajes } = require('../lib/sql');
+const { crearViaje, obtenerViaje, listarViajesDe, confirmarViaje, cancelarViaje } = require('../services/viajes');
+
+// Viaje = RESERVA. Nace PENDIENTE (hold de 10 min), luego CONFIRMADO / CANCELADO / EXPIRADO.
+router.use(requireAuth);
+
+// Crear reserva (hold). Body:
+// { tramos_programados: [id, ...],  // en orden; sale de /api/busqueda
+//   pasajeros: [{ nombres, apellidos, tipo_documento, numero_documento, asientos: { "<id_tramo_programado>": "12A" } }] }
+router.post('/', requireRol('VIAJERO'), async (req, res) => {
+  res.status(201).json(await crearViaje(req.auth.perfil.id, req.body));
 });
-// TEST - INSERT
-router.post('/', async (req, res) => {
-    const viaje = req.body;
-    await Viaje.create(viaje);
-    res.json(viaje);
-});// buscar viajes según parámetros
-router.get('/buscar', async (req, res) => {
-    try {
-        const { origen, destino, fecha_salida, fecha_regreso, pasajeros } = req.query;
 
-        // Busca los IDs de los terminales
-        const terminalOrigen = await Terminal.findOne({ where: { nombre: { [Op.like]: `%${origen}%` } } });
-        const terminalDestino = await Terminal.findOne({ where: { nombre: { [Op.like]: `%${destino}%` } } });
+router.get('/mios', requireRol('VIAJERO'), async (req, res) => {
+  await expirarViajes();
+  res.json(await listarViajesDe(req.auth.perfil.id));
+});
 
-        if (!terminalOrigen || !terminalDestino) {
-            return res.json({ viajes: [], parametros: req.query });
-        }
+router.get('/:id', requireRol('VIAJERO', 'ADMIN'), async (req, res) => {
+  await expirarViajes();
+  const viaje = await obtenerViaje(Number(req.params.id));
+  if (!viaje || (req.auth.rol === 'VIAJERO' && viaje.id_viajero !== req.auth.perfil.id)) throw new ErrorHttp(404, 'Viaje no encontrado.');
+  res.json(viaje);
+});
 
-        const viajes = await Viaje.findAll({
-            where: {
-                [Op.and]: [
-                    Sequelize.where(
-                        Sequelize.fn('DATE', Sequelize.col('instante_abordaje')),
-                        fecha_salida // debe ser 'YYYY-MM-DD'
-                    ),
-                    { estado: { [Op.notIn]: ['CANCELADO'] } },
-                    { esta_habilitado: true }
-                ]
-            },
-            include: [
-                {
-                    model: Ruta,
-                    where: {
-                        id_terminal_origen: terminalOrigen.id_terminal,
-                        id_terminal_destino: terminalDestino.id_terminal
-                    },
-                    include: [
-                        { model: Terminal, as: 'terminalOrigen' },
-                        { model: Terminal, as: 'terminalDestino' }
-                    ]
-                },
-                { model: Empresa },
-                { model: Tarifa }
-            ]
-        });
+router.post('/:id/confirmar', requireRol('VIAJERO'), async (req, res) => {
+  res.json(await confirmarViaje(Number(req.params.id), req.auth.perfil.id));
+});
 
-        viajes.forEach(viaje => {
-            console.log(
-                'Viaje:', viaje.id_viaje,
-                'Ruta:', viaje.Ruta?.id_ruta,
-                'Origen:', viaje.Ruta?.terminalOrigen?.nombre,
-                'Destino:', viaje.Ruta?.terminalDestino?.nombre
-            );
-        });
-
-        // Formatear resultados 
-        const viajesFormateados = viajes.map(viaje => ({
-            id_viaje: viaje.id_viaje,
-            estado: viaje.estado,
-            instante_abordaje: viaje.instante_abordaje,
-            instante_partida: viaje.instante_partida,
-            instante_llegada: viaje.instante_llegada,
-            duracion_estimada_minutos: viaje.duracion_estimada_minutos,
-            empresa: viaje.Empresa ? {
-                id_empresa: viaje.Empresa.id_empresa,
-                razon_social: viaje.Empresa.razon_social
-            } : null,
-            ruta: viaje.Ruta ? {
-                origen: viaje.Ruta.terminalOrigen ? viaje.Ruta.terminalOrigen.nombre : 'Desconocido',
-                destino: viaje.Ruta.terminalDestino ? viaje.Ruta.terminalDestino.nombre : 'Desconocido',
-                distancia: viaje.Ruta.distancia_de_recorrido
-            } : null,
-            tarifas: viaje.Tarifas ? viaje.Tarifas.map(tarifa => ({
-                id_tarifa: tarifa.id_tarifa,
-                precio: tarifa.precio,
-                tipo: tarifa.tipo
-            })) : []
-        }));
-
-        res.json({
-            viajes: viajesFormateados,
-            parametros: {
-                origen,
-                destino,
-                fecha_salida,
-                fecha_regreso,
-                pasajeros: parseInt(pasajeros) || 1
-            }
-        });
-
-    } catch (error) {
-        console.error('Error al buscar viajes:', error);
-        res.status(500).json({ 
-            error: 'Error interno del servidor',
-            mensaje: error.message 
-        });
-    }
+router.post('/:id/cancelar', requireRol('VIAJERO'), async (req, res) => {
+  res.json(await cancelarViaje(Number(req.params.id), req.auth.perfil.id));
 });
 
 module.exports = router;

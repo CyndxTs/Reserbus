@@ -1,0 +1,136 @@
+### Pruebas manuales sin front. Extensión "REST Client" de VS Code (o el cliente HTTP de IntelliJ).
+### Antes: npm start  y  npm run seed.  Pon aquí tus datos de Supabase:
+@base = http://localhost:3001
+@supabaseUrl = https://TU-PROYECTO.supabase.co
+@publishableKey = sb_publishable_xxxxxxxx
+@clave = Reserbus123!
+
+### ---------- LOGIN (guarda el token de cada rol) ----------
+# @name loginViajero
+POST {{supabaseUrl}}/auth/v1/token?grant_type=password
+apikey: {{publishableKey}}
+Content-Type: application/json
+
+{ "email": "viajero@example.com", "password": "{{clave}}" }
+
+###
+# @name loginAndes
+POST {{supabaseUrl}}/auth/v1/token?grant_type=password
+apikey: {{publishableKey}}
+Content-Type: application/json
+
+{ "email": "andes.admin@example.com", "password": "{{clave}}" }
+
+###
+# @name loginAdmin
+POST {{supabaseUrl}}/auth/v1/token?grant_type=password
+apikey: {{publishableKey}}
+Content-Type: application/json
+
+{ "email": "admin@example.com", "password": "{{clave}}" }
+
+###
+@viajero = {{loginViajero.response.body.access_token}}
+@andes = {{loginAndes.response.body.access_token}}
+@admin = {{loginAdmin.response.body.access_token}}
+
+### ---------- SALUD / PERFIL ----------
+GET {{base}}/api/salud
+
+###
+GET {{base}}/api/auth/me
+Authorization: Bearer {{viajero}}
+
+### Registro de perfil para una cuenta nueva (correo o Google) que aún no tiene perfil
+POST {{base}}/api/auth/registro
+Authorization: Bearer {{viajero}}
+Content-Type: application/json
+
+{ "nombres": "Nuevo", "apellidos": "Viajero" }
+
+### ---------- CATÁLOGO PÚBLICO ----------
+GET {{base}}/api/terminales
+
+###
+GET {{base}}/api/tramos
+
+### ---------- BÚSQUEDA ----------
+### Cambia los ids de terminal por los de tu BD (GET /api/terminales) y la fecha (día local del origen)
+GET {{base}}/api/busqueda?origen=1&destino=4&fecha=2026-11-17&pasajeros=2&orden=llegada
+
+###
+GET {{base}}/api/busqueda?origen_provincia=1&destino_provincia=4&fecha=2026-11-17&orden=precio
+
+### Mapa de asientos de un tramo programado (usa un id que salga en la búsqueda)
+GET {{base}}/api/tramos-programados/1/asientos
+
+### ---------- RESERVA ----------
+### tramos_programados: los ids de la búsqueda, en orden. asientos: { "<id_tramo_programado>": "12A" }
+# @name crearViaje
+POST {{base}}/api/viajes
+Authorization: Bearer {{viajero}}
+Content-Type: application/json
+
+{
+  "tramos_programados": [1, 2],
+  "pasajeros": [
+    { "nombres": "Ana", "apellidos": "Prueba", "tipo_documento": "DNI", "numero_documento": "11111111",
+      "asientos": { "1": "1A", "2": "1A" } }
+  ]
+}
+
+###
+@idViaje = {{crearViaje.response.body.id}}
+
+GET {{base}}/api/viajes/{{idViaje}}
+Authorization: Bearer {{viajero}}
+
+###
+POST {{base}}/api/viajes/{{idViaje}}/confirmar
+Authorization: Bearer {{viajero}}
+
+###
+POST {{base}}/api/viajes/{{idViaje}}/cancelar
+Authorization: Bearer {{viajero}}
+
+###
+GET {{base}}/api/viajes/mios
+Authorization: Bearer {{viajero}}
+
+### ---------- EMPRESA (login andes) ----------
+GET {{base}}/api/planes
+Authorization: Bearer {{andes}}
+
+###
+GET {{base}}/api/tipos-de-bus
+Authorization: Bearer {{andes}}
+
+###
+GET {{base}}/api/tarifas
+Authorization: Bearer {{andes}}
+
+### Crear un tipo de bus (los rangos deben cubrir filas 1..filas sin huecos)
+POST {{base}}/api/tipos-de-bus
+Authorization: Bearer {{andes}}
+Content-Type: application/json
+
+{ "nombre": "Mini 2+2", "filas": 6, "asientos_por_fila": 4,
+  "rangos": [ { "fila_desde": 1, "fila_hasta": 2, "id_tipo_asiento": 1 }, { "fila_desde": 3, "fila_hasta": 6, "id_tipo_asiento": 2 } ] }
+
+### Generar tramos programados de un plan (90 días por defecto)
+POST {{base}}/api/planes/1/generar
+Authorization: Bearer {{andes}}
+Content-Type: application/json
+
+{ "dias": 30 }
+
+### ---------- ADMIN ----------
+GET {{base}}/api/empresas
+Authorization: Bearer {{admin}}
+
+###
+POST {{base}}/api/empresas
+Authorization: Bearer {{admin}}
+Content-Type: application/json
+
+{ "nombre": "Nueva Empresa SAC" }

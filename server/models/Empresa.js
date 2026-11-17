@@ -1,65 +1,13 @@
-module.exports = (sequelize, DataTypes) => {
-  const Empresa = sequelize.define('Empresa', {
-    id_empresa: {
-      type: DataTypes.INTEGER,
-      primaryKey: true,
-      autoIncrement: true
-    },
-    id_auth: {
-      type: DataTypes.UUID,
-      allowNull: false,
-      unique: true
-    },
-    correo_electronico: {
-      type: DataTypes.STRING(120),
-      allowNull: false,
-      unique: true
-    },
-    razon_social: {
-      type: DataTypes.STRING(120),
-      allowNull: false
-    },
-    ruc: {
-      type: DataTypes.STRING(11),
-      allowNull: false,
-      unique: true
-    },
-    descripcion: {
-      type: DataTypes.STRING(200),
-      allowNull: true,
-      defaultValue: null
-    },
-    logo_url: {
-      type: DataTypes.TEXT,
-      allowNull: true,
-      defaultValue: null
-    },
-    esta_habilitado: {
-      type: DataTypes.BOOLEAN,
-      allowNull: false,
-      defaultValue: true
-    }
-  }, {
-    tableName: 'empresa',
-    freezeTableName: true,
-    timestamps: false,
-    underscored: true
+const definir = require('../lib/modelo');
+module.exports = (sequelize, { INTEGER, STRING, BOOLEAN }) => {
+  const Empresa = definir(sequelize, 'Empresa', 'empresa', {
+    id: { type: INTEGER, primaryKey: true, autoIncrement: true },
+    nombre: { type: STRING(100), allowNull: false, unique: true },
+    activa: { type: BOOLEAN, allowNull: false, defaultValue: true },
   });
-
-  Empresa.associate = (models) => {
-    Empresa.hasMany(models.Bus, {
-      foreignKey: 'id_empresa',
-      onDelete: 'CASCADE'
-    });
-    Empresa.hasMany(models.Terminal, {
-      foreignKey: 'id_empresa',
-      onDelete: 'CASCADE'
-    });
-    Empresa.hasMany(models.Viaje, {
-      foreignKey: 'id_empresa',
-      onDelete: 'CASCADE'
-    });
+  Empresa.associate = (m) => {
+    Empresa.hasMany(m.Trabajador, { foreignKey: 'id_empresa' });
+    Empresa.hasMany(m.Bus, { foreignKey: 'id_empresa' });
   };
-
   return Empresa;
 };

@@ -16,7 +16,8 @@ const sequelize = new Sequelize(
     dialect: 'postgres',
     dialectModule: require('pg'),
     logging: false,
-    dialectOptions: { ssl: { require: true, rejectUnauthorized: false } },
+    // Supabase exige SSL; en una BD local pon DB_SSL=false
+    dialectOptions: process.env.DB_SSL === 'false' ? {} : { ssl: { require: true, rejectUnauthorized: false } },
     pool: { max: 3, min: 0, idle: 10000 },
   }
 );

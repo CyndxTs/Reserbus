@@ -1,122 +1,42 @@
 const express = require('express');
 const router = express.Router();
-const { Bus, Servicio } = require('../models');
+const { Bus, TipoBus, Servicio } = require('../models');
+const { requireAuth, requireRol } = require('../middleware/auth');
+const { requerir, propio } = require('../lib/errores');
 
-// TEST - SELECT ALL
+// Buses físicos de MI empresa
+router.use(requireAuth, requireRol('EMPRESA'));
+
+const completo = { include: [{ model: TipoBus }, { model: Servicio, as: 'servicios', through: { attributes: [] } }] };
+
 router.get('/', async (req, res) => {
-  try {
-    const buses = await Bus.findAll({
-      where: { id_empresa: req.params.id },
-      include: [
-        {
-          model: Servicio,
-          as: 'servicios'
-        },
-        {
-          model: Piso,
-          as: 'Pisos'
-        }
-      ]
-    });
-    res.json(buses);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
+  res.json(await Bus.findAll({ where: { id_empresa: req.auth.id_empresa }, ...completo, order: [['id', 'ASC']] }));
 });
-// TEST - INSERT
+
+// { placa, id_tipo_bus, servicios: [id_servicio, ...] }
 router.post('/', async (req, res) => {
-  console.log("Cuerpo recibido del frontend:", req.body);
-
-  const { placa, marca, modelo, cantidad_pisos, id_empresa, esta_habilitado, servicios } = req.body;
-
-  try {
-    // 1. Crear el bus
-    const nuevoBus = await Bus.create({
-      placa,
-      marca,
-      modelo,
-      cantidad_pisos,
-      id_empresa,
-      esta_habilitado
-    });
-
-    // 2. Asociar servicios (si llegan)
-    if (Array.isArray(servicios) && servicios.length > 0) {
-      await nuevoBus.setServicios(servicios); 
-    }
-
-    // 3. Obtener bus con relaciones para responder
-    const busCompleto = await Bus.findByPk(nuevoBus.id_bus, {
-      include: [{
-        model: Servicio,
-        as: 'servicios'
-      }]
-    });
-
-    res.status(201).json(busCompleto);
-  } catch (error) {
-    
-    console.error("Error en POST /api/buses:", error);
-    res.status(500).json({ error: 'Error al crear el bus', detalle: error.message });
-  
-  }
+  requerir(req.body, ['placa', 'id_tipo_bus']);
+  const { placa, id_tipo_bus, servicios } = req.body;
+  const bus = await Bus.create({ id_empresa: req.auth.id_empresa, id_tipo_bus, placa });
+  if (Array.isArray(servicios) && servicios.length) await bus.setServicios(servicios);
+  res.status(201).json(await Bus.findByPk(bus.id, completo));
 });
 
-// TEST - UPDATE
 router.put('/:id', async (req, res) => {
-  const { id } = req.params;
-  const { placa, marca, modelo, cantidad_pisos, servicios } = req.body;
-
-  try {
-    // 1. Actualizar el bus
-    await Bus.update(
-      { placa, marca, modelo, cantidad_pisos },
-      { where: { id_bus: id } }
-    );
-
-    // 2. Obtener el bus y actualizar servicios
-    const bus = await Bus.findByPk(id);
-    if (bus) {
-      await bus.setServicios(servicios || []);
-      
-      // 3. Obtener el bus con servicios para responder
-      const busActualizado = await Bus.findByPk(id, {
-        include: [{
-          model: Servicio,
-          as: 'servicios'
-        }]
-      });
-      
-      res.json(busActualizado);
-    } else {
-      res.status(404).json({ error: 'Bus no encontrado' });
-    }
-  } catch (error) {
-    console.error("Error:", error);
-    res.status(500).json({ error: 'Error al actualizar el bus' });
-  }
+  const bus = await propio(Bus, req.params.id, req.auth.id_empresa);
+  const { placa, id_tipo_bus, activo, servicios } = req.body;
+  await bus.update({
+    ...(placa !== undefined && { placa }), ...(id_tipo_bus !== undefined && { id_tipo_bus }), ...(activo !== undefined && { activo }),
+  });
+  if (Array.isArray(servicios)) await bus.setServicios(servicios);
+  res.json(await Bus.findByPk(bus.id, completo));
 });
 
-// TEST - DELETE (logical delete)
+// Baja lógica (se conserva el historial)
 router.delete('/:id', async (req, res) => {
-  const { id } = req.params;
-
-  try {
-    // 1. Actualizar el estado de habilitación del bus
-    const [updated] = await Bus.update(
-      { esta_habilitado: false },
-      { where: { id_bus: id } }
-    );
-
-    if (!updated) {
-      return res.status(404).json({ error: 'Bus no encontrado' });
-    }
-
-    res.json({ message: 'Bus deshabilitado correctamente' });
-  } catch (error) {
-    console.error("Error en DELETE /api/buses/:id:", error);
-    res.status(500).json({ error: 'Error al eliminar el bus', detalle: error.message });
-  }
+  const bus = await propio(Bus, req.params.id, req.auth.id_empresa);
+  await bus.update({ activo: false });
+  res.json({ mensaje: 'Bus dado de baja.' });
 });
 
 module.exports = router;
