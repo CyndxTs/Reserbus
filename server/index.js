@@ -6,8 +6,26 @@ const db = require('./models');
 const { manejadorErrores, noEncontrado } = require('./lib/errores');
 const app = express();
 // MIDDLEWARE
+const EN_PRODUCCION = process.env.NODE_ENV === 'production';   // Vercel lo define automáticamente
+const ORIGENES = (process.env.CLIENT_ORIGINS || '').split(',').map(s => s.trim()).filter(Boolean);
+// En local se permite el client de Vite sin tener que tocar el .env
+if (!EN_PRODUCCION) ORIGENES.push('http://localhost:3000', 'http://127.0.0.1:3000');
+
 app.use(express.json());
-app.use(cors({ origin: (process.env.CLIENT_ORIGINS || '').split(',') }));
+app.use(cors({ origin: ORIGENES }));
+
+// Bloquea peticiones que no vengan de tu client (ej: escribir la URL en el navegador).
+// Solo en producción: en local puedes usar Postman, reserbus.http o `npm run prueba`.
+if (EN_PRODUCCION) {
+  app.use((req, res, next) => {
+    if (req.method === 'OPTIONS') return next();   // preflight de CORS
+    const origin = req.headers.origin;
+    const referer = req.headers.referer || '';
+    const ok = ORIGENES.includes(origin) || ORIGENES.some(o => referer.startsWith(o));
+    if (!ok) return res.status(403).json({ error: 'Forbidden' });
+    next();
+  });
+}
 // ENDPOINTS
 app.get('/api/salud', async (req, res) => {
   const [[{ ahora }]] = await db.sequelize.query('SELECT now() AS ahora');
