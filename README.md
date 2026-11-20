@@ -33,7 +33,7 @@ Para ir de **TA a TD**, el resultado es TA → TB con el Plan A y luego TB → T
 
 | Capa | Tecnología |
 |---|---|
-| 🎨 Front | React 19, TypeScript, Vite, Tailwind CSS 4, React Router 7, Formik y Yup, Axios, date-fns |
+| 🎨 Front | React 19, TypeScript, Vite, Tailwind CSS 4, React Router 7, Formik y Yup, Axios, date-fns, Three.js (React Three Fiber y drei) para la escena 3D, Motion y Lucide |
 | ⚙️ Back | Node.js, Express 5, Sequelize |
 | 🗃️ Base de datos | PostgreSQL en Supabase (schema `reserbus`) |
 | 🔑 Autenticación | Supabase Auth (correo y contraseña, y Google), tokens validados con JWKS usando `jose` |
@@ -72,7 +72,7 @@ Puntos clave:
 |---|---|---|
 | 🛡️ `ADMIN` | `administrador` | Gestiona empresas, usuarios, países, provincias y servicios. No tiene relación con ninguna empresa. |
 | 🏢 `EMPRESA` | `trabajador` (tipo `ADMINISTRATIVO`) | Gestiona la flota, tipos de asiento, tarifas, rutas, planes y tramos programados de **su** empresa. |
-| 🧑‍✈️ Chofer | `trabajador` (tipo `CHOFER`) | Se asigna a planes. No tiene panel propio. |
+| 🧑‍✈️ Chofer | `trabajador` (tipo `CHOFER`) | Se asigna a planes. No tiene panel propio ni acceso a la web (sin correo ni contraseña). |
 | 🧳 `VIAJERO` | `viajero` | Busca, reserva, confirma y cancela sus viajes. |
 
 Las búsquedas y los catálogos de ubicación (países, provincias, terminales, tramos) son de lectura pública para el client; todo lo demás exige token.
@@ -81,7 +81,7 @@ Las búsquedas y los catálogos de ubicación (países, provincias, terminales, 
 
 ## 🗄️ Modelo de datos
 
-El DDL completo está en [`Reserbus - DDL.sql`](./Reserbus%20-%20DDL.sql).
+El DDL completo está en [`server/supabase/schema.sql`](./server/supabase/schema.sql).
 
 ### 🗺️ Vista general
 
@@ -269,23 +269,50 @@ Los asientos no tienen tabla. El código es la fila más la letra de la columna,
 - Es idempotente: no duplica registros existentes.
 - No crea tramos que ya salieron.
 
+### 🌱 Datos de prueba (seed)
+
+`npm run seed` deja la base lista para probar. `scripts/seed.js` corre **siempre en este orden** los tres archivos SQL de `server/supabase/`:
+
+```mermaid
+flowchart LR
+    A["🧱 schema.sql<br/>DROP + tablas vacías"]:::paso --> B["👥 users.sql<br/>cuentas y perfiles"]:::auth --> C["🗓️ catalog.sql<br/>flota, rutas, planes<br/>y tramos programados"]:::back
+
+    classDef paso fill:#fee2e2,stroke:#dc2626,color:#7f1d1d,stroke-width:2px
+    classDef auth fill:#dcfce7,stroke:#16a34a,color:#14532d,stroke-width:2px
+    classDef back fill:#ede9fe,stroke:#7c3aed,color:#4c1d95,stroke-width:2px
+```
+
+| Archivo | Qué crea |
+|---|---|
+| 🧱 `schema.sql` | Borra el schema `reserbus` y recrea todas las tablas **vacías**. |
+| 👥 `users.sql` | 1 administrador, 5 empresas, 5 trabajadores administrativos, 26 choferes y 3 viajeros. |
+| 🗓️ `catalog.sql` | Perú con 10 provincias y 11 terminales, 18 rutas (ida y vuelta), 8 tipos de bus, 45 buses, 40 planes y cerca de 10 mil tramos programados. |
+
+- **Ventana de fechas automática:** los tramos programados van desde el día 1 del mes actual (hora de Perú) hasta 6 meses después. Se recalcula con la fecha del día en que corres el seed, así que siempre hay al menos 6 meses de datos. Por ejemplo, el 19/11/2026 genera de 01/11/2026 a 30/04/2027.
+- **Solo plantilla:** no crea viajes, pasajeros ni pasajes, ni salidas que ya pasaron. Las reservas las hacen los usuarios desde la app.
+- **UTC:** todo se guarda en UTC. Los horarios del seed se escriben en hora local de Perú y se convierten con `pais.desfase_utc_min` al insertar.
+- **Reiniciar:** cada corrida borra todo, incluidas las reservas que se hayan hecho.
+- **Cuentas:** `users.sql` inserta las cuentas directo en `auth.users` y `auth.identities`. Los choferes llevan una cuenta de Auth vacía (sin correo ni contraseña) porque `trabajador.auth_id` es obligatorio.
+- **Una transacción por archivo:** si un paso falla se deshace y los siguientes no se ejecutan.
+
 ---
 
 ## 📁 Estructura del repositorio
 
 ```
 Reserbus/
-├── Reserbus - DDL.sql          DDL completo (schema reserbus)
 ├── client/                     Front React + TypeScript
 │   ├── public/                 Logos e ilustraciones
 │   └── src/
 │       ├── app/                Rutas principales (App.tsx)
-│       ├── components/         Header y componentes de UI compartidos
+│       ├── components/         Header, escena 3D (Three.js) y componentes de UI compartidos
+│       ├── lib/                Cliente de la API, Supabase y estilos compartidos
 │       └── features/
 │           ├── account/        Perfil del viajero
 │           ├── admin/          Panel del administrador
 │           ├── auth/           Contexto de sesión, modales, rutas protegidas
 │           ├── booking/        Reserva, resumen, mis viajes
+│           ├── company/        Panel de la empresa (buses)
 │           ├── search/         Home y resultados de búsqueda
 │           └── static/         Secciones informativas y 404
 └── server/                     API Express
@@ -295,8 +322,8 @@ Reserbus/
     ├── routes/                 Endpoints agrupados por recurso
     ├── services/               Lógica: búsqueda, viajes, generación, usuarios
     ├── lib/                    Utilidades (errores, SQL, cliente Supabase)
-    ├── scripts/                seed, crear-admin, token
-    └── pruebas/                Prueba de punta a punta y archivo .http
+    ├── scripts/seed.js         Corre en orden los 3 archivos de supabase/
+    └── supabase/               SQL de PostgreSQL: schema.sql, users.sql, catalog.sql
 ```
 
 ---
@@ -305,26 +332,24 @@ Reserbus/
 
 ### ✅ Requisitos
 
-- Node.js 20 o superior
-- Un proyecto de Supabase con el DDL ya ejecutado
+- Node.js 20.19 o superior (lo pide Vite 8)
+- Un proyecto de Supabase vacío. No hace falta ejecutar ningún SQL a mano: el seed crea las tablas.
 
 ### 🪜 Pasos
 
-**1. Crear la base de datos**
-
-Abre el SQL Editor de Supabase y ejecuta `Reserbus - DDL.sql`. El script empieza con `DROP SCHEMA IF EXISTS reserbus CASCADE`, así que se puede volver a correr para reiniciar todo.
-
-**2. Configurar el server**
+**1. Configurar el server y cargar los datos**
 
 ```bash
 cd server
 npm install
 # crea server/.env con las variables de la sección siguiente
-npm run seed        # datos de prueba
+npm run seed        # reinicia la BD: schema + users + catalog (6 meses de salidas desde el día 1 del mes actual)
 npm start           # http://localhost:3001
 ```
 
-**3. Configurar el client**
+El seed se conecta con las variables `DB_*`. Si falla la conexión, usa el puerto `5432` (modo sesión) del pooler de Supabase en lugar del `6543`. Solo necesitas correrlo la primera vez o cuando quieras reiniciar la base.
+
+**2. Configurar el client**
 
 ```bash
 cd client
@@ -337,16 +362,16 @@ El client usa un proxy de Vite que redirige `/api` hacia `http://localhost:3001`
 
 ### 🧪 Usuarios de prueba (creados por el seed)
 
-Todos usan la contraseña `Reserbus123!`.
+Todos usan la contraseña `12345678`.
 
 | Rol | Correo |
 |---|---|
-| 🛡️ Administrador | `admin@example.com` |
-| 🏢 Empresa Andes | `andes.admin@example.com` |
-| 🏢 Empresa Altiplano | `altiplano.admin@example.com` |
-| 🧑‍✈️ Chofer | `chofer.andes@example.com` |
-| 🧳 Viajero | `viajero@example.com` |
-| 🧳 Viajero 2 | `viajero2@example.com` |
+| 🛡️ Administrador | `administrador@reserbus.com` |
+| 🏢 Trabajador de Transportes Andes | `trabajador@reserbus.com` |
+| 🏢 Trabajador de Expreso Altiplano, Norte Express, Sierra Central y Pacífico Sur | `trabajador2@reserbus.com` a `trabajador5@reserbus.com` (en ese orden) |
+| 🧳 Viajero | `viajero@reserbus.com`, `viajero2@reserbus.com` y `viajero3@reserbus.com` |
+
+Las empresas y los choferes existen en la base pero no tienen cuenta de acceso (no tienen correo ni contraseña).
 
 ---
 
@@ -359,13 +384,12 @@ Todos usan la contraseña `Reserbus123!`.
 | `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` | Conexión a Postgres de Supabase. |
 | `DB_SSL` | Ponla en `false` solo si usas una base local sin SSL. |
 | `SUPABASE_URL` | URL del proyecto de Supabase. |
-| `SUPABASE_PUBLISHABLE_KEY` | Llave pública (se usa en `scripts/token.js` y en las pruebas). |
 | `SUPABASE_SECRET_KEY` | Llave secreta para administrar usuarios. **Solo en el server.** |
 | `SUPABASE_JWKS_URL` | Llaves públicas para validar tokens. Normalmente `https://TU-PROYECTO.supabase.co/auth/v1/.well-known/jwks.json`. |
 | `CLIENT_ORIGINS` | Dominios permitidos separados por coma. En producción: `https://cdx-reserbus.vercel.app`. |
 | `PORT` | Puerto local (por defecto 3001). |
 | `TRASBORDO_MIN_MIN` | Margen mínimo de trasbordo en minutos (por defecto 30). |
-| `BASE_URL` | Solo para `npm run prueba`, si el server no está en `localhost:3001`. |
+| `SEED_DESDE`, `SEED_MESES` | Opcionales, solo para el seed. Fuerzan el primer día de la ventana (`YYYY-MM-DD`) y su duración en meses (por defecto, el día 1 del mes actual y 6 meses). |
 
 ### 🖥️ Client (`client/.env`)
 
@@ -386,12 +410,12 @@ Todos se ejecutan desde `server/`, salvo los del client.
 | Comando | Qué hace |
 |---|---|
 | `npm start` | Levanta la API con nodemon. |
-| `npm run seed` | Crea usuarios en Supabase Auth, perfiles y datos de prueba. Se puede repetir. |
-| `npm run prueba` | Prueba de punta a punta: login, búsqueda con trasbordo entre empresas, reserva con hold, doble venta, confirmar, cancelar, expiración y permisos. Requiere el server corriendo y el seed ejecutado. |
-| `node scripts/crear-admin.js correo clave nombres apellidos` | Crea el primer administrador. |
-| `node scripts/token.js correo clave` | Imprime un access token para probar la API con curl o Postman. |
+| `npm run seed` | Reinicia la base en orden: `schema.sql`, `users.sql` y `catalog.sql` (carpeta `server/supabase/`). Se puede repetir. No crea reservas. |
+| `npm run seed:empty` | Solo el paso 1: deja las tablas vacías. |
+| `npm run seed -- schema users` | Corre solo los pasos indicados (`schema`, `users`, `catalog`), siempre en su orden. |
 | `npm run dev` (client) | Servidor de desarrollo de Vite. |
 | `npm run build` (client) | Revisa tipos y genera el build de producción. |
+| `npm run preview` (client) | Sirve el build de producción en local. |
 
 ---
 
@@ -410,3 +434,4 @@ Decisiones acordadas que conviene respetar al modificar el proyecto.
 | Cobro por tipo de bus | Varios buses pueden compartir ruta y horario con distinto plan y precio. |
 | Hold de 10 minutos | Mientras el usuario completa la reserva. |
 | Precio congelado | Se guarda en `pasaje.precio` al reservar. |
+| Seed sin reservas | Los datos de prueba solo dejan la plantilla (catálogo y tramos programados). No hay viajes, pasajes ni salidas pasadas. |
