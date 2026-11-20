@@ -79,3 +79,9 @@ export const fechaHora = (iso: string) =>
 
 export const mensajeError = (e: unknown, porDefecto = 'Ocurrió un error. Intenta de nuevo.') =>
   (axios.isAxiosError(e) && (e.response?.data as { error?: string } | undefined)?.error) || porDefecto;
+
+// Hora corta local (Lima) a partir de un ISO UTC
+export const horaCorta = (iso: string) =>
+  new Date(iso).toLocaleTimeString('es-PE', { timeZone: 'America/Lima', hour: '2-digit', minute: '2-digit', hour12: false });
+export const diaCorto = (iso: string) =>
+  new Date(iso).toLocaleDateString('es-PE', { timeZone: 'America/Lima', weekday: 'short', day: 'numeric', month: 'short' });

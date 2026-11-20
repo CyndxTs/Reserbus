@@ -1,24 +1,30 @@
+import { Route, Sofa, Waypoints } from 'lucide-react';
+
 const valores = [
-  { titulo: 'Reserva sin colas', texto: 'Elige tu asiento y reserva desde casa, sin papeleo ni esperas en el terminal.' },
-  { titulo: 'Las mejores empresas', texto: 'Comparamos horarios y tarifas de empresas de transporte formales en un solo lugar.' },
-  { titulo: 'Viaja a tu manera', texto: 'Combina rutas y empresas para llegar a tu destino de la forma más práctica.' },
+  { Icono: Sofa, titulo: 'Eliges tu asiento', texto: 'Ves el bus por dentro y reservas el asiento exacto, sin colas ni papeleo en el terminal.' },
+  { Icono: Waypoints, titulo: 'Combinas empresas', texto: 'Si no hay un bus directo, armamos el viaje con tramos de distintas empresas.' },
+  { Icono: Route, titulo: 'Horarios que calzan', texto: 'Solo mostramos conexiones donde llegas antes de que salga el siguiente bus.' },
 ];
 
 // Sección del inicio: "Acerca de nosotros"
 const AcercaDeSection = () => (
-  <section id="acerca-de" className="mx-auto max-w-[960px] px-6 py-12 text-left">
-    <h2 className="mb-4 text-[40px] font-bold text-brand">Acerca de nosotros</h2>
-    <p className="mb-8 text-[20px] leading-relaxed text-[#6a6a6a]">
-      Reserbus es una plataforma de reserva de pasajes de bus. Nuestro objetivo es que viajar por el país sea
-      tan simple como elegir un destino, una fecha y un asiento.
-    </p>
-    <div className="grid gap-6 md:grid-cols-3">
-      {valores.map((v) => (
-        <div key={v.titulo} className="rounded-[22px] border-[1.5px] border-[#bbb] bg-white p-6 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
-          <h3 className="mb-2 text-[20px] font-bold text-brand">{v.titulo}</h3>
-          <p className="text-[#444]">{v.texto}</p>
-        </div>
-      ))}
+  <section id="acerca-de" className="py-16">
+    <div className="grid gap-10 lg:grid-cols-[0.8fr_1.2fr]">
+      <div>
+        <h2 className="font-display text-[clamp(1.8rem,3.2vw,2.6rem)] font-bold leading-tight tracking-tight">Acerca de Reserbus</h2>
+        <p className="mt-4 max-w-[34rem] text-[1.1rem] leading-relaxed text-tinta-suave">
+          Reserbus es una plataforma de reserva de pasajes de bus. Elige un destino, una fecha y un asiento: nosotros buscamos el resto.
+        </p>
+      </div>
+      <div className="grid gap-4 sm:grid-cols-3">
+        {valores.map(({ Icono, titulo, texto }) => (
+          <div key={titulo} className="vidrio rounded-3xl p-6">
+            <span className="mb-4 flex h-11 w-11 items-center justify-center rounded-2xl bg-brand text-white shadow-brillo"><Icono className="h-5 w-5" /></span>
+            <h3 className="mb-2 font-display text-[1rem] font-bold">{titulo}</h3>
+            <p className="text-[0.95rem] leading-relaxed text-tinta-suave">{texto}</p>
+          </div>
+        ))}
+      </div>
     </div>
   </section>
 );

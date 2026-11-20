@@ -1,12 +1,15 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import axios from 'axios';
-import Header from '../../../../components/layout/Header/Header';
+import Pagina from '../../../../components/layout/Pagina';
+import Aviso from '../../../../components/ui/Aviso';
+import Cargando from '../../../../components/ui/Cargando';
+import ConfirmModal from '../../../../components/ui/ConfirmModal/ConfirmModal';
+import CuentaRegresiva from '../../components/CuentaRegresiva';
 import ReservaSteps from '../../components/ReservaSteps';
 import ViajeDetalle from '../../components/ViajeDetalle';
-import { ViajeReserva, codigoReserva, mensajeError } from '../../utils/ReservaUtil';
-
-const boton = 'cursor-pointer rounded-lg border-0 px-8 py-3 text-[16px] disabled:cursor-not-allowed disabled:opacity-50';
+import { cancelarViaje, confirmarViaje, obtenerViaje } from '../../services/ViajeService';
+import { ViajeReserva, codigoReserva, mensajeError, soles } from '../../utils/ReservaUtil';
+import { btnPrimario, btnSecundario, titulo } from '../../../../lib/estilos';
 
 // Ruta: /resumen/:id (VIAJERO). Resumen de la compra con el hold de 10 min; aquí se confirma o cancela.
 function Resumen() {
@@ -16,10 +19,11 @@ function Resumen() {
   const [error, setError] = useState<string | null>(null);
   const [restante, setRestante] = useState(0);
   const [ocupado, setOcupado] = useState(false);
+  const [pidiendoCancelar, setPidiendoCancelar] = useState(false);
 
   const cargar = useCallback(async () => {
     try {
-      const { data } = await axios.get<ViajeReserva>(`/api/viajes/${id}`);
+      const data = await obtenerViaje(id!);
       if (data.estado === 'CONFIRMADO') return navigate(`/reserva/${id}`, { replace: true });
       setViaje(data);
     } catch (e) { setError(mensajeError(e, 'No se encontró la reserva.')); }
@@ -40,54 +44,59 @@ function Resumen() {
   }, [viaje, cargar]);
 
   const accion = async (que: 'confirmar' | 'cancelar') => {
-    if (que === 'cancelar' && !window.confirm('¿Cancelar esta reserva? Se liberarán los asientos.')) return;
-    setOcupado(true); setError(null);
+    setOcupado(true); setError(null); setPidiendoCancelar(false);
     try {
-      await axios.post(`/api/viajes/${id}/${que}`);
-      if (que === 'confirmar') navigate(`/reserva/${id}`);
-      else navigate('/');
+      if (que === 'confirmar') { await confirmarViaje(id!); navigate(`/reserva/${id}`); }
+      else { await cancelarViaje(id!); navigate('/'); }
     } catch (e) { setError(mensajeError(e)); cargar(); }
     finally { setOcupado(false); }
   };
 
-  const mm = String(Math.floor(restante / 60)).padStart(2, '0');
-  const ss = String(restante % 60).padStart(2, '0');
-
   return (
-    <div>
-      <Header />
+    <Pagina ancho="max-w-[1080px]">
       <ReservaSteps paso={3} />
-      <main className="mx-auto max-w-[760px] px-6 pb-10">
-        <h1 className="mb-2 text-[32px] font-bold text-brand">Resumen de tu compra</h1>
-        {!viaje ? <p>{error ?? 'Cargando…'}</p> : (
-          <>
-            <p className="mb-4 text-[#555]">Reserva <strong>{codigoReserva(viaje.id)}</strong></p>
-            {viaje.estado === 'PENDIENTE' ? (
-              <p className="mb-4 rounded-lg bg-[#f6f6ff] p-3 text-brand">
-                Tus asientos están retenidos por <strong>{mm}:{ss}</strong>. Confirma antes de que se acabe el tiempo.
-              </p>
-            ) : (
-              <p className="mb-4 rounded-lg bg-red-50 p-3 font-bold text-red-600">
-                {viaje.estado === 'EXPIRADO' ? 'El tiempo de reserva venció y los asientos se liberaron.' : 'Esta reserva fue cancelada.'}
-              </p>
+      {!viaje ? (error ? <Aviso tipo="error">{error}</Aviso> : <Cargando />) : (
+        <div className="grid items-start gap-6 lg:grid-cols-[1fr_340px]">
+          <div>
+            <h1 className={`${titulo} mb-1 text-[clamp(1.5rem,3vw,2rem)]`}>Revisa tu reserva</h1>
+            <p className="mb-6 text-tinta-suave">Código <strong className="text-tinta">{codigoReserva(viaje.id)}</strong></p>
+            {viaje.estado !== 'PENDIENTE' && (
+              <div className="mb-5"><Aviso tipo="error">{viaje.estado === 'EXPIRADO' ? 'El tiempo de reserva venció y los asientos se liberaron. Busca el viaje de nuevo para reservar.' : 'Esta reserva fue cancelada.'}</Aviso></div>
             )}
             <ViajeDetalle viaje={viaje} />
-            {error && <p className="mb-3 font-bold text-red-600">{error}</p>}
-            <div className="flex justify-center gap-4">
+          </div>
+
+          <aside className="vidrio rounded-3xl p-6 lg:sticky lg:top-24">
+            {viaje.estado === 'PENDIENTE' ? (
+              <>
+                <CuentaRegresiva restante={restante} />
+                <p className="mt-4 text-center text-[0.9rem] text-tinta-suave">Confirma antes de que se acabe el tiempo.</p>
+              </>
+            ) : null}
+            <div className="my-5 flex items-center justify-between border-y-2 border-dashed border-brand/25 py-4">
+              <span className="font-display text-[0.9rem] font-bold">Total</span>
+              <span className="font-display text-[1.5rem] font-bold">{soles(viaje.total)}</span>
+            </div>
+            {error && <div className="mb-4"><Aviso tipo="error">{error}</Aviso></div>}
+            <div className="flex flex-col gap-3">
               {viaje.estado === 'PENDIENTE' ? (
                 <>
-                  <button className={`${boton} border-[1.5px] border-brand bg-white text-brand`} disabled={ocupado} onClick={() => accion('cancelar')}>Cancelar</button>
-                  <button className={`${boton} bg-brand text-white`} disabled={ocupado || restante === 0} onClick={() => accion('confirmar')}>Confirmar reserva</button>
+                  <button className={btnPrimario} disabled={ocupado || restante === 0} onClick={() => accion('confirmar')}>{ocupado ? 'Confirmando…' : 'Confirmar reserva'}</button>
+                  <button className={btnSecundario} disabled={ocupado} onClick={() => setPidiendoCancelar(true)}>Cancelar reserva</button>
                 </>
               ) : (
-                <button className={`${boton} bg-brand text-white`} onClick={() => navigate('/')}>Buscar otro viaje</button>
+                <button className={btnPrimario} onClick={() => navigate('/')}>Buscar otro viaje</button>
               )}
             </div>
-            <p className="mt-4 text-[13px] text-[#888]">El pago en línea aún no está habilitado: al confirmar, la reserva queda registrada directamente.</p>
-          </>
-        )}
-      </main>
-    </div>
+            <p className="mt-4 text-[0.8rem] leading-relaxed text-tinta-suave">El pago en línea aún no está habilitado: al confirmar, la reserva queda registrada directamente.</p>
+          </aside>
+        </div>
+      )}
+      {pidiendoCancelar && (
+        <ConfirmModal title="¿Cancelar esta reserva?" message="Se liberarán los asientos y tendrás que buscar el viaje de nuevo." primaryButtonText="Sí, cancelar" secondaryButtonText="Volver"
+          peligro onConfirm={() => accion('cancelar')} onCancel={() => setPidiendoCancelar(false)} />
+      )}
+    </Pagina>
   );
 }
 

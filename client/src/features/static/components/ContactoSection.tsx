@@ -1,63 +1,61 @@
 import { useState } from 'react';
 import { Formik, Form, Field, ErrorMessage } from 'formik';
 import * as Yup from 'yup';
+import { enviarMensaje } from '../services/ContactoService';
+import Aviso from '../../../components/ui/Aviso';
+import { btnPrimario, campo, errorCampo, etiqueta } from '../../../lib/estilos';
 
 const Schema = Yup.object().shape({
-  nombre: Yup.string().required('Requerido'),
-  email: Yup.string().email('Correo inválido').required('Requerido'),
-  mensaje: Yup.string().min(10, 'Mínimo 10 caracteres').required('Requerido'),
+  nombre: Yup.string().required('Escribe tu nombre'),
+  email: Yup.string().email('Correo inválido').required('Escribe tu correo'),
+  mensaje: Yup.string().min(10, 'Mínimo 10 caracteres').required('Escribe tu mensaje'),
 });
-
-const etiqueta = 'flex items-center justify-between text-left text-[16px] font-semibold text-[#6a6a6a]';
-const errorCampo = 'text-[12px] font-bold text-red-600';
-const input = 'w-full rounded-xl border-2 border-[#ccc] p-3';
 
 // Sección del inicio (al final): "Contacto"
 const ContactoSection = () => {
-  const [enviado, setEnviado] = useState(false);
+  const [respuesta, setRespuesta] = useState<string | null>(null);
 
   return (
-    <section id="contacto" className="mx-auto max-w-[640px] px-6 pb-16 pt-8 text-left">
-      <h2 className="mb-2 text-[40px] font-bold text-brand">Contacto</h2>
-      <p className="mb-8 text-[18px] text-[#6a6a6a]">¿Tienes dudas sobre una reserva? Escríbenos y te responderemos pronto.</p>
-
-      {enviado ? (
-        <div className="rounded-2xl bg-[#f6f6ff] p-6 text-[18px] text-brand">¡Gracias! Recibimos tu mensaje.</div>
-      ) : (
+    <section id="contacto" className="py-8">
+      <div className="vidrio grid gap-10 rounded-[2rem] p-6 sm:p-10 lg:grid-cols-[0.8fr_1.2fr]">
+        <div>
+          <h2 className="font-display text-[clamp(1.6rem,3vw,2.2rem)] font-bold leading-tight tracking-tight">¿Dudas sobre una reserva?</h2>
+          <p className="mt-4 text-[1.05rem] leading-relaxed text-tinta-suave">Cuéntanos qué pasó y te respondemos por correo.</p>
+        </div>
         <Formik
           initialValues={{ nombre: '', email: '', mensaje: '' }}
           validationSchema={Schema}
-          onSubmit={(_values, { setSubmitting }) => {
-            // TODO: conectar con un endpoint del server (POST /api/contacto)
-            setEnviado(true);
+          onSubmit={async (values, { setSubmitting }) => {
+            const r = await enviarMensaje(values);
+            setRespuesta(r.mensaje);
             setSubmitting(false);
           }}
         >
           {({ isValid, dirty, isSubmitting }) => (
-            <Form className="flex flex-col gap-4">
-              <div className="flex flex-col gap-1">
-                <div className={etiqueta}><label htmlFor="nombre">Nombre</label><ErrorMessage name="nombre" component="div" className={errorCampo} /></div>
-                <Field id="nombre" name="nombre" className={input} />
+            <Form className="flex flex-col gap-4" noValidate>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label htmlFor="nombre" className={etiqueta}>Nombre</label>
+                  <Field id="nombre" name="nombre" className={campo} />
+                  <ErrorMessage name="nombre" component="div" className={errorCampo} />
+                </div>
+                <div>
+                  <label htmlFor="email" className={etiqueta}>Correo</label>
+                  <Field id="email" name="email" type="email" className={campo} />
+                  <ErrorMessage name="email" component="div" className={errorCampo} />
+                </div>
               </div>
-              <div className="flex flex-col gap-1">
-                <div className={etiqueta}><label htmlFor="email">Correo</label><ErrorMessage name="email" component="div" className={errorCampo} /></div>
-                <Field id="email" name="email" type="email" className={input} />
+              <div>
+                <label htmlFor="mensaje" className={etiqueta}>Mensaje</label>
+                <Field id="mensaje" name="mensaje" as="textarea" rows={4} className={campo} />
+                <ErrorMessage name="mensaje" component="div" className={errorCampo} />
               </div>
-              <div className="flex flex-col gap-1">
-                <div className={etiqueta}><label htmlFor="mensaje">Mensaje</label><ErrorMessage name="mensaje" component="div" className={errorCampo} /></div>
-                <Field id="mensaje" name="mensaje" as="textarea" rows={5} className={input} />
-              </div>
-              <button
-                type="submit"
-                disabled={!dirty || !isValid || isSubmitting}
-                className="cursor-pointer rounded-lg border-0 bg-brand p-3 text-[16px] text-white disabled:cursor-not-allowed disabled:bg-[#bda8f9]"
-              >
-                Enviar mensaje
-              </button>
+              {respuesta && <Aviso tipo="info">{respuesta}</Aviso>}
+              <button type="submit" disabled={!dirty || !isValid || isSubmitting} className={`${btnPrimario} self-start`}>Enviar mensaje</button>
             </Form>
           )}
         </Formik>
-      )}
+      </div>
     </section>
   );
 };

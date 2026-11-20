@@ -1,161 +1,107 @@
 import { useEffect, useState } from 'react';
-import { SearchValues, Terminal } from '../../utils/BuscarViajeUtil';
 import { useNavigate } from 'react-router-dom';
-import { Formik, Form, Field, ErrorMessage, FormikHelpers } from 'formik';
-import * as Yup from 'yup';
-import axios from 'axios';
+import { motion } from 'motion/react';
+import { Armchair, Search as IconoBuscar, Ticket } from 'lucide-react';
+import Pagina from '../../../../components/layout/Pagina';
+import Hero3D from '../../../../components/three/Hero3D';
+import Aviso from '../../../../components/ui/Aviso';
+import BuscadorViaje from '../../components/BuscadorViaje';
+import { listarTerminales } from '../../services/UbicacionService';
+import { SearchValues, Terminal } from '../../utils/BuscarViajeUtil';
 import AcercaDeSection from '../../../static/components/AcercaDeSection';
 import ContactoSection from '../../../static/components/ContactoSection';
-import Header from '../../../../components/layout/Header/Header';
+
+const pasos = [
+  { Icono: IconoBuscar, titulo: 'Busca tu ruta', texto: 'Elige terminal de origen, destino y fecha. Te mostramos directos y combinaciones.' },
+  { Icono: Armchair, titulo: 'Elige tu asiento', texto: 'Abre el mapa del bus y marca el asiento de cada pasajero. Lo retenemos 10 minutos.' },
+  { Icono: Ticket, titulo: 'Confirma y listo', texto: 'Revisa el resumen y confirma. Tu código de reserva queda en Mis viajes.' },
+];
 
 function Home() {
   const navigate = useNavigate();
   const [terminales, setTerminales] = useState<Terminal[]>([]);
-  const [errorBusqueda, setErrorBusqueda] = useState<string | null>(null);
+  const [errorTerminales, setErrorTerminales] = useState(false);
 
   useEffect(() => {
-    axios.get<Terminal[]>('/api/terminales').then((r) => setTerminales(r.data)).catch(() => setTerminales([]));
+    listarTerminales().then(setTerminales).catch(() => setErrorTerminales(true));
   }, []);
-  const nombreTerminal = (id: string) => terminales.find((t) => String(t.id) === id)?.nombre ?? id;
-  const SearchSchema = Yup.object().shape({
-    origen: Yup.string().required('Campo requerido'),
-    destino: Yup.string().required('Campo requerido'),
-    salida: Yup.date().required('Fecha requerida'),
-    regreso: Yup.date()
-      .nullable()
-      .notRequired()
-      .when('salida', (salida, schema) => {
-        // Solo aplicar min() si salida es una fecha válida
-        return Array.isArray(salida) || !salida || isNaN(new Date(salida).getTime())
-          ? schema
-          : schema.min(salida, 'La fecha de regreso debe ser posterior a la de salida');
-      }),
-    pasajeros: Yup.number()
-      .min(1, 'Mínimo 1 pasajero')
-      .required('Campo requerido'),
-  });
 
-  const handleSearch = async (values: SearchValues, { setSubmitting, setFieldError }:FormikHelpers<SearchValues>) => {
-    setErrorBusqueda(null);
-    try {
-      const { data } = await axios.get('/api/busqueda', {
-        params: { origen: values.origen, destino: values.destino, fecha: values.salida, pasajeros: values.pasajeros },
-      });
-      navigate('/resultados', {
-        state: {
-          resultados: data.resultados,
-          parametros: {
-            origen: nombreTerminal(values.origen),
-            destino: nombreTerminal(values.destino),
-            fecha_salida: values.salida,
-            pasajeros: values.pasajeros,
-          },
-        },
-      });
-    } catch (e) {
-      console.error('Error en la búsqueda:', e);
-      setErrorBusqueda('No se pudo realizar la búsqueda.');
-    } finally {
-      setSubmitting(false);
-    }
+  // La búsqueda vive en la URL: así se puede recargar y cambiar de fecha desde los resultados
+  const buscar = (v: SearchValues) => {
+    const q = new URLSearchParams({ origen: v.origen, destino: v.destino, fecha: v.salida, pasajeros: String(v.pasajeros) });
+    navigate(`/resultados?${q.toString()}`);
   };
 
   return (
-    <div>
-      {/* componente Header */}
-      <Header />
-      {/* Slogan */}
-      <div className="mt-5 p-5">
-        <div className="text-[72px] font-bold text-brand">
-          reserva fácil,<br />viaja fácil
+    <Pagina>
+      {/* HERO */}
+      <section className="relative grid items-center gap-2 pb-6 pt-8 lg:grid-cols-[1.05fr_0.95fr] lg:pt-12">
+        <div className="relative z-10">
+          <motion.h1 initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, ease: [0.2, 0.8, 0.2, 1] }}
+            className="font-display text-[clamp(2.2rem,5vw,4.4rem)] font-bold leading-[1.04] tracking-tight">
+            <span className="block text-tinta">Del terminal al destino,</span>
+            <span className="block text-brand">con tu asiento ya elegido.</span>
+          </motion.h1>
+          <motion.p initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.12 }}
+            className="mt-6 max-w-[32rem] text-[1.15rem] leading-relaxed text-tinta-suave">
+            Compara empresas, combina rutas cuando no hay bus directo y reserva en el mapa del bus.
+          </motion.p>
         </div>
-        <div className="mt-4 text-[24px] text-[#6a6a6a]">
-          Llega a tu destino en el bus que necesites, cuando lo necesites y al mejor precio
+        <div className="relative h-[340px] sm:h-[440px] lg:h-[540px]">
+          <Hero3D />
         </div>
-      </div>
-      
-      {/* Buscar viajes según parametros */}
-      <Formik
-        initialValues={{
-        origen: '',
-        destino: '',
-        salida: '',
-        regreso: '',
-        pasajeros: 1,
-        }}
-        validationSchema={SearchSchema}
-        onSubmit={handleSearch}
-      >
-      {({ isValid }) => (
-      <Form className="mx-auto flex w-full max-w-[1250px] flex-wrap items-center gap-6 rounded-full bg-white px-8 py-[1.2rem] shadow-[0_2px_10px_rgba(0,0,0,0.08)]">
-        <div className="relative flex min-h-[90px] flex-col items-start">
-          <label htmlFor="origen" className="mb-[5px] text-[14px] font-medium text-[#333]">Origen</label>
-          <Field as="select" name="origen" className="min-w-[180px] rounded-xl border-2 border-[#ccc] p-3">
-            <option value="">Seleccione...</option>
-            {terminales.map((t) => <option key={t.id} value={t.id}>{t.nombre}</option>)}
-          </Field>
-          <ErrorMessage name="origen" component="div" className="relative -mt-2 h-5 self-center text-[12px] font-bold text-red-600" />
-        </div>
-        <div className="relative flex min-h-[90px] flex-col items-start">
-          <label htmlFor="destino" className="mb-[5px] text-[14px] font-medium text-[#333]">Destino</label>
-          <Field as="select" name="destino" className="min-w-[180px] rounded-xl border-2 border-[#ccc] p-3">
-            <option value="">Seleccione...</option>
-            {terminales.map((t) => <option key={t.id} value={t.id}>{t.nombre}</option>)}
-          </Field>
-          <ErrorMessage name="destino" component="div" className="relative -mt-2 h-5 self-center text-[12px] font-bold text-red-600" />
-        </div>
-        <div className="relative flex min-h-[90px] flex-col items-start">
-          <label htmlFor="salida" className="mb-[5px] text-[14px] font-medium text-[#333]">Fecha de salida</label>
-          <Field type="date" name="salida" className="min-w-[180px] rounded-xl border-2 border-[#ccc] p-3" />
-          <ErrorMessage name="salida" component="div" className="relative -mt-2 h-5 self-center text-[12px] font-bold text-red-600" />
-        </div>
-        <div className="relative flex min-h-[90px] flex-col items-start">
-          <label htmlFor="regreso" className="mb-[5px] text-[14px] font-medium text-[#333]">Fecha de retorno (opcional)</label>
-          <Field type="date" name="regreso" className="min-w-[180px] rounded-xl border-2 border-[#ccc] p-3" />
-          <ErrorMessage name="regreso" component="div" className="relative -mt-2 h-5 self-center text-[12px] font-bold text-red-600" />
-        </div>
-        <div className="relative flex min-h-[90px] flex-col items-start">
-          <label htmlFor="pasajeros" className="mb-[5px] text-[14px] font-medium text-[#333]">Num. Pasajeros</label>
-          <Field type="number" name="pasajeros" placeholder="Pasajeros" min="1" className="min-w-[180px] rounded-xl border-2 border-[#ccc] p-3" />
-          <ErrorMessage name="pasajeros" component="div" className="relative -mt-2 h-5 self-center text-[12px] font-bold text-red-600" />
-        </div>
-        <button type="submit" className="cursor-pointer rounded-xl border-0 bg-brand px-4 py-3 text-[16px] text-white disabled:cursor-not-allowed disabled:opacity-50" disabled={!isValid}>
-        <img src="/Icon_Search.svg" alt="icon-search" className="h-6 w-6"/>
-        </button>
-      </Form>
-      )}
-      </Formik>
-      {errorBusqueda && <div className="mt-2 text-[14px] font-bold text-red-600">{errorBusqueda}</div>}
+      </section>
 
-      {/* Features */}
-      <div className="bg-white px-24 py-8">
-        <div className="flex flex-row items-center gap-[120px]">
-          <img src="/Ilustration_3.png" alt="ilustration" className="w-[400px] max-w-full" />
-          <div className="flex flex-1 flex-col items-start gap-1">
-            <div className="mb-2 text-[36px] font-bold">¡Un viaje a tu gusto!</div>
-            <p className="my-5 text-justify text-[20px] text-[#6a6a6a]">
-              Reserbus te facilita el proceso de reservar un asiento sin esperar largas colas o papeleo.
-              Reserva desde la comodidad de tu casa de la manera más rápida, práctica y segura.
-            </p>
-            <div className="flex flex-row items-center gap-3">
-              <img src="/Icon_Star.svg" alt="icon-star" className="h-9 w-9"/>
-              <p className="my-5 text-justify text-[20px] text-[#6a6a6a]">Elige entre las mejores empresas de transporte.</p>
-            </div>
-            <div className="flex flex-row items-center gap-3">
-              <img src="/Icon_Dollar.svg" alt="icon-dollar" className="-ml-2 h-[52px] w-[52px]"/>
-              <p className="-ml-2 my-5 text-justify text-[20px] text-[#6a6a6a]">Usa el medio de pago que prefieras.</p>
-            </div>
-            <div className="flex flex-row items-center gap-3">
-              <img src="/Icon_Position.svg" alt="icon-position" className="h-9 w-9"/>
-              <p className="my-5 text-justify text-[20px] text-[#6a6a6a]">Rutas a más de 80 destinos en el país.</p>
-            </div>
-          </div>
-        </div>
+      {/* BUSCADOR */}
+      <div className="relative z-10 -mt-4 lg:-mt-10">
+        <BuscadorViaje terminales={terminales} onBuscar={buscar} />
+        {errorTerminales && <div className="mt-4"><Aviso tipo="error">No pudimos cargar los terminales. Revisa tu conexión y recarga la página.</Aviso></div>}
       </div>
+
+      {/* CÓMO FUNCIONA: es una secuencia real, por eso va numerada */}
+      <section className="py-20">
+        <h2 className="mb-10 max-w-[28rem] font-display text-[clamp(1.8rem,3.2vw,2.6rem)] font-bold leading-tight tracking-tight">Reservar toma tres pasos</h2>
+        <ol className="relative m-0 grid list-none gap-5 p-0 md:grid-cols-3">
+          <div aria-hidden className="absolute left-[10%] right-[10%] top-7 hidden border-t-2 border-dashed border-brand/30 md:block" />
+          {pasos.map(({ Icono, titulo, texto }, i) => (
+            <li key={titulo} className="vidrio relative rounded-3xl p-6">
+              <span className="relative mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-brand text-white shadow-brillo">
+                <Icono className="h-6 w-6" />
+                <span className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-senal font-display text-[0.7rem] font-bold text-tinta">{i + 1}</span>
+              </span>
+              <h3 className="mb-2 font-display text-[1.05rem] font-bold">{titulo}</h3>
+              <p className="text-[0.98rem] leading-relaxed text-tinta-suave">{texto}</p>
+            </li>
+          ))}
+        </ol>
+      </section>
+
+      {/* CONEXIONES: lo que diferencia a Reserbus */}
+      <section className="vidrio grid items-center gap-10 rounded-[2rem] p-6 sm:p-10 lg:grid-cols-[1fr_1.1fr]">
+        <div>
+          <h2 className="font-display text-[clamp(1.6rem,3vw,2.3rem)] font-bold leading-tight tracking-tight">Un viaje, dos empresas</h2>
+          <p className="mt-4 max-w-[30rem] text-[1.05rem] leading-relaxed text-tinta-suave">
+            ¿Tu destino no tiene bus directo? Unimos el tramo de una empresa con el de otra en el terminal donde se cruzan, siempre con tiempo suficiente para el trasbordo.
+          </p>
+        </div>
+        <svg viewBox="0 0 520 150" role="img" aria-label="Ejemplo: tramo de la empresa A hasta el terminal B y tramo de la empresa B hasta el terminal D" className="w-full">
+          <line x1="40" y1="75" x2="260" y2="75" stroke="#4f2ff0" strokeWidth="6" strokeLinecap="round" />
+          <line x1="260" y1="75" x2="480" y2="75" stroke="#ff5a1f" strokeWidth="6" strokeLinecap="round" strokeDasharray="1 14" />
+          {[[40, 'A'], [260, 'B'], [480, 'D']].map(([x, t]) => (
+            <g key={t as string}>
+              <circle cx={x as number} cy="75" r="16" fill="#fff" stroke="#1b1647" strokeWidth="3" />
+              <text x={x as number} y="81" textAnchor="middle" fontFamily="Unbounded Variable, sans-serif" fontWeight="700" fontSize="15" fill="#1b1647">{t}</text>
+            </g>
+          ))}
+          <text x="150" y="48" textAnchor="middle" fontSize="14" fontWeight="700" fill="#4f2ff0">Empresa 1</text>
+          <text x="370" y="48" textAnchor="middle" fontSize="14" fontWeight="700" fill="#c93a07">Empresa 2</text>
+          <text x="260" y="124" textAnchor="middle" fontSize="13" fontWeight="600" fill="#5d5890">Trasbordo en B</text>
+        </svg>
+      </section>
 
       <AcercaDeSection />
       <ContactoSection />
-    </div>
+    </Pagina>
   );
 }
 

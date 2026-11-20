@@ -1,8 +1,9 @@
+import { format } from 'date-fns';
+
 export interface SearchValues {
   origen: string;      // id de terminal (como texto, viene de un <select>)
   destino: string;     // id de terminal
   salida: string;      // YYYY-MM-DD (día local del terminal de origen)
-  regreso: string;     // el server aún no soporta ida y vuelta: se ignora
   pasajeros: number;
 }
 
@@ -11,6 +12,11 @@ export interface Terminal {
   nombre: string;
   direccion: string;
   Provincia?: { id: number; nombre: string };
+}
+
+export interface Servicio {
+  id: number;
+  nombre: string;
 }
 
 // Una "sección" es el tramo de un itinerario que hace un mismo bus (de un plan de una empresa)
@@ -41,6 +47,8 @@ export interface Itinerario {
   secciones: Seccion[];
 }
 
+export type Orden = 'llegada' | 'precio' | 'trasbordos';
+
 export interface SearchParams {
   origen: string;          // nombre, solo para mostrar
   destino: string;
@@ -48,8 +56,43 @@ export interface SearchParams {
   pasajeros: number;
 }
 
+// Estado que viaja de resultados a /reservar
 export interface LocationState {
-  resultados: Itinerario[];
-  itinerario: Itinerario;      // el elegido en resultados (para /reservar)
+  itinerario: Itinerario;
   parametros: SearchParams;
 }
+
+export const hoyLocal = () => format(new Date(), 'yyyy-MM-dd');
+export const MAX_PASAJEROS = 8;
+
+// "YYYY-MM-DD HH:mm" -> "HH:mm"
+export const hora = (local: string) => (local ? local.slice(11, 16) : '--:--');
+// "YYYY-MM-DD HH:mm" -> minutos absolutos (para comparar y proporcionar tramos)
+export const minutosLocal = (local: string) => {
+  const [f, h] = local.split(' ');
+  const [y, m, d] = f.split('-').map(Number);
+  const [hh, mm] = h.split(':').map(Number);
+  return Date.UTC(y, m - 1, d, hh, mm) / 60000;
+};
+
+export const formatoDuracion = (minutos: number) => {
+  if (!minutos || minutos <= 0) return '—';
+  const h = Math.floor(minutos / 60);
+  const m = minutos % 60;
+  return h ? `${h} h${m ? ` ${m} min` : ''}` : `${m} min`;
+};
+
+export type Franja = 'madrugada' | 'manana' | 'tarde' | 'noche';
+export const FRANJAS: { id: Franja; nombre: string; rango: string }[] = [
+  { id: 'madrugada', nombre: 'Madrugada', rango: 'antes de 6:00' },
+  { id: 'manana', nombre: 'Mañana', rango: '6:00 a 12:00' },
+  { id: 'tarde', nombre: 'Tarde', rango: '12:00 a 18:00' },
+  { id: 'noche', nombre: 'Noche', rango: 'desde 18:00' },
+];
+export const franjaDe = (local: string): Franja => {
+  const h = Number(local.slice(11, 13));
+  if (h < 6) return 'madrugada';
+  if (h < 12) return 'manana';
+  if (h < 18) return 'tarde';
+  return 'noche';
+};

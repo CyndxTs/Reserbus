@@ -1,4 +1,5 @@
-import { ReactNode, useState } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
+import { X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Formik, Form, Field, ErrorMessage, FormikHelpers } from 'formik';
 import * as Yup from 'yup';
@@ -35,20 +36,20 @@ const ForgotSchema = Yup.object().shape({
 });
 
 // Clases Tailwind reutilizadas dentro de los modales de autenticación
-const tituloIn = 'mb-4 text-[32px] font-bold text-black';
-const tituloUp = 'mb-1 text-[24px] font-bold text-brand';
+const tituloIn = 'mb-2 font-display text-[1.6rem] font-bold leading-tight tracking-tight text-tinta';
+const tituloUp = 'mb-1 font-display text-[1.3rem] font-bold leading-tight tracking-tight text-tinta';
 const campo = 'flex flex-col gap-1';
-const etiqueta = 'flex items-center justify-between text-left text-[16px] font-semibold text-[#6a6a6a]';
-const errorCampo = 'mt-1 text-[12px] font-bold text-red-600';
-const inputIn = 'rounded-xl border-2 border-[#ccc] p-2';
-const inputUp = 'rounded-xl border-2 border-[#ccc] p-[6px]';
-const enlace = 'text-right text-[16px] text-brand underline';
+const etiqueta = 'flex items-center justify-between text-left text-[0.85rem] font-semibold text-tinta-suave';
+const errorCampo = 'text-[0.75rem] font-semibold text-rose-600';
+const inputIn = 'w-full rounded-xl border border-brand/20 bg-white px-3.5 py-2.5 text-[1rem] text-tinta transition focus:border-brand focus:outline-none focus:ring-4 focus:ring-brand/15';
+const inputUp = inputIn;
+const enlace = 'text-right text-[0.9rem] font-semibold text-brand underline-offset-4 hover:underline';
 const boton =
-  'mt-4 cursor-pointer rounded-lg border-0 bg-brand p-3 text-[16px] text-white disabled:cursor-not-allowed disabled:bg-[#bda8f9]';
+  'mt-2 cursor-pointer rounded-xl border-0 bg-senal px-5 py-3 font-display text-[0.85rem] font-semibold text-tinta shadow-senal transition hover:-translate-y-0.5 hover:bg-[#ff6e3a] disabled:cursor-not-allowed disabled:opacity-45 disabled:shadow-none disabled:hover:translate-y-0';
 const botonGoogle =
-  'flex w-full cursor-pointer items-center justify-center gap-[10px] rounded-lg border border-[#d0d0d0] bg-white px-4 py-[10px] text-[16px] font-semibold text-[#3c3c3c] transition hover:bg-[#f7f7f7] hover:shadow-[0_1px_4px_rgba(0,0,0,0.12)]';
+  'flex w-full cursor-pointer items-center justify-center gap-[10px] rounded-xl border border-brand/20 bg-white px-4 py-2.5 text-[0.95rem] font-semibold text-tinta transition hover:border-brand/50 hover:bg-brand-soft/50';
 const divisor =
-  "flex items-center gap-3 text-[14px] text-[#9a9a9a] before:h-px before:flex-1 before:bg-[#e2e2e2] before:content-[''] after:h-px after:flex-1 after:bg-[#e2e2e2] after:content-['']";
+  "flex items-center gap-3 text-[0.8rem] text-tinta-suave before:h-px before:flex-1 before:bg-brand/15 before:content-[''] after:h-px after:flex-1 after:bg-brand/15 after:content-['']";
 
 const GoogleIcon = () => (
   <svg viewBox="0 0 48 48" aria-hidden="true" className="h-5 w-5">
@@ -62,32 +63,44 @@ const GoogleIcon = () => (
 interface FrameProps {
   onClose: () => void;
   adOnLeft: boolean;
-  illustration: string;
+  illustration?: string;   // ya no se usa: el panel lateral es de gradiente (se conserva por compatibilidad)
   children: ReactNode;
 }
 
-const Frame = ({ onClose, adOnLeft, illustration, children }: FrameProps) => {
-  const ad = (
-    <div className="flex w-1/2 flex-col items-center justify-center bg-brand p-8 text-white">
-      <img src="/RB_LogoWhite.png" alt="logo-icon" className="-mb-8 h-40 w-40" />
-      <div className="text-[32px] font-bold text-white">Reserbus</div>
-      <img src={illustration} alt="illustration" className="mt-4 w-full" />
+// Panel lateral: gradiente índigo con la ruta del bus
+const Lateral = () => (
+  <div className="relative hidden w-[42%] flex-col justify-between overflow-hidden bg-gradient-to-br from-brand to-brand-dark p-8 text-white md:flex">
+    <div className="flex items-center gap-3">
+      <img src="/RB_LogoWhite.png" alt="" className="h-10 w-10 rounded-xl bg-white/15 p-0.5" />
+      <span className="font-display text-[1.15rem] font-bold">reserbus</span>
     </div>
-  );
+    <svg viewBox="0 0 240 200" aria-hidden className="my-6 w-full">
+      <path d="M20 170 C 70 170, 60 100, 120 100 S 180 30, 220 30" fill="none" stroke="rgba(255,255,255,0.35)" strokeWidth="3" strokeDasharray="2 9" strokeLinecap="round" />
+      <circle cx="20" cy="170" r="9" fill="#fff" />
+      <circle cx="120" cy="100" r="9" fill="#fff" />
+      <circle cx="220" cy="30" r="11" fill="#ff5a1f" />
+    </svg>
+    <p className="font-display text-[1.1rem] font-bold leading-snug">Tu asiento, tu ruta, sin colas.</p>
+  </div>
+);
+
+const Frame = ({ onClose, adOnLeft, children }: FrameProps) => {
+  useEffect(() => {
+    const tecla = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', tecla);
+    return () => document.removeEventListener('keydown', tecla);
+  }, [onClose]);
   return (
-    <>
-      <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/60" onClick={onClose}>
-        <div
-          className="relative flex h-auto min-h-[500px] w-[800px] max-w-[90%] overflow-hidden rounded-2xl bg-white"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <button className="absolute right-5 top-[15px] cursor-pointer border-0 bg-transparent text-[20px]" onClick={onClose}>✖</button>
-          {adOnLeft && ad}
-          <div className="flex w-1/2 flex-col justify-center gap-4 p-8">{children}</div>
-          {!adOnLeft && ad}
-        </div>
+    <div className="fixed inset-0 z-[999] flex items-center justify-center bg-tinta/55 p-4 backdrop-blur-sm" onClick={onClose}>
+      <div role="dialog" aria-modal="true" className="relative flex max-h-[94vh] min-h-[480px] w-[860px] max-w-full animate-modal-in overflow-hidden rounded-[2rem] bg-white shadow-[0_40px_90px_-24px_rgba(27,22,71,0.6)]" onClick={(e) => e.stopPropagation()}>
+        <button aria-label="Cerrar" className="absolute right-4 top-4 z-10 flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border-0 bg-transparent text-tinta-suave transition hover:bg-brand-soft" onClick={onClose}>
+          <X className="h-5 w-5" />
+        </button>
+        {adOnLeft && <Lateral />}
+        <div className="flex flex-1 flex-col justify-center gap-4 overflow-y-auto p-6 sm:p-9">{children}</div>
+        {!adOnLeft && <Lateral />}
       </div>
-    </>
+    </div>
   );
 };
 
@@ -163,7 +176,7 @@ const AuthModals = ({ mode, initialEmail, onClose, onSwitch }: AuthModalsProps) 
     return (
       <Frame onClose={close} adOnLeft={true} illustration="/Illustration_1.png">
         <div className={tituloIn}>{notice.title}</div>
-        <p className="m-0 text-[16px] leading-normal text-[#3c3c3c]">{notice.text}</p>
+        <p className="m-0 text-[1rem] leading-relaxed text-tinta-suave">{notice.text}</p>
         <button type="button" className={boton} onClick={close}>Entendido</button>
       </Frame>
     );
@@ -205,9 +218,9 @@ const AuthModals = ({ mode, initialEmail, onClose, onSwitch }: AuthModalsProps) 
               <button type="submit" className={boton} disabled={!isValid || isSubmitting}>
                 Iniciar sesión
               </button>
-              <p className="my-4">
+              <p className="my-2 text-[0.92rem] text-tinta-suave">
                 ¿No tiene una cuenta?{' '}
-                <a href="#" className="text-brand underline" onClick={(e) => { e.preventDefault(); switchTo('signup', values.email); }}>
+                <a href="#" className="font-semibold text-brand underline-offset-4 hover:underline" onClick={(e) => { e.preventDefault(); switchTo('signup', values.email); }}>
                   ¡Regístrate!
                 </a>
               </p>
@@ -247,7 +260,7 @@ const AuthModals = ({ mode, initialEmail, onClose, onSwitch }: AuthModalsProps) 
                 </div>
                 <Field id="email" name="email" type="email" className={inputUp} />
               </div>
-              <div className="flex flex-row gap-2">
+              <div className="grid grid-cols-2 gap-2">
                 <div className={campo}>
                   <div className={etiqueta}>
                     <label htmlFor="nombres">Nombres</label>
@@ -277,10 +290,10 @@ const AuthModals = ({ mode, initialEmail, onClose, onSwitch }: AuthModalsProps) 
                 </div>
                 <Field id="confirmPassword" name="confirmPassword" type="password" className={inputUp} />
               </div>
-              <div className="flex flex-row gap-1 self-center">
+              <div className="flex flex-row items-center gap-2 text-[0.9rem] text-tinta-suave">
                 <Field type="checkbox" id="acceptedTerms" name="acceptedTerms" />
                 <label htmlFor="acceptedTerms">
-                  Acepto los <a href="#" className="text-brand underline">términos y condiciones</a>
+                  Acepto los <a href="#" className="font-semibold text-brand underline-offset-4 hover:underline">términos y condiciones</a>
                 </label>
               </div>
               <button
@@ -290,9 +303,9 @@ const AuthModals = ({ mode, initialEmail, onClose, onSwitch }: AuthModalsProps) 
               >
                 Registrarse
               </button>
-              <p className="my-4">
+              <p className="my-2 text-[0.92rem] text-tinta-suave">
                 ¿Ya tiene una cuenta?{' '}
-                <a href="#" className="text-brand underline" onClick={(e) => { e.preventDefault(); switchTo('signin', values.email); }}>
+                <a href="#" className="font-semibold text-brand underline-offset-4 hover:underline" onClick={(e) => { e.preventDefault(); switchTo('signin', values.email); }}>
                   ¡Inicie sesión ya!
                 </a>
               </p>
@@ -315,7 +328,7 @@ const AuthModals = ({ mode, initialEmail, onClose, onSwitch }: AuthModalsProps) 
         {({ isValid, values, isSubmitting }) => (
           <Form className="flex flex-col gap-3">
             <div className={tituloIn}>Recupera tu acceso</div>
-            <p className="m-0 text-[15px] leading-[1.4] text-[#6a6a6a]">
+            <p className="m-0 text-[0.92rem] leading-relaxed text-tinta-suave">
               Te enviaremos un enlace para restablecer tu contraseña. Si entraste con Google, también
               sirve para crear una contraseña y poder usar ambos métodos.
             </p>
@@ -329,8 +342,8 @@ const AuthModals = ({ mode, initialEmail, onClose, onSwitch }: AuthModalsProps) 
             <button type="submit" className={boton} disabled={!isValid || isSubmitting}>
               Enviar enlace
             </button>
-            <p className="my-4">
-              <a href="#" className="text-brand underline" onClick={(e) => { e.preventDefault(); switchTo('signin', values.email); }}>
+            <p className="my-2 text-[0.92rem] text-tinta-suave">
+              <a href="#" className="font-semibold text-brand underline-offset-4 hover:underline" onClick={(e) => { e.preventDefault(); switchTo('signin', values.email); }}>
                 Volver a iniciar sesión
               </a>
             </p>

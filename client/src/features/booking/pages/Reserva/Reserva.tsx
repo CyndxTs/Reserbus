@@ -1,17 +1,21 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import axios from 'axios';
-import Header from '../../../../components/layout/Header/Header';
+import { Box, Plus, Square, Trash2 } from 'lucide-react';
+import Pagina from '../../../../components/layout/Pagina';
+import Aviso from '../../../../components/ui/Aviso';
+import Cargando from '../../../../components/ui/Cargando';
 import AuthModals, { AuthMode } from '../../../auth/components/AuthModals/AuthModals';
 import { useClient, Viajero } from '../../../auth/ClientContext';
-import { Itinerario, LocationState, SearchParams } from '../../../search/utils/BuscarViajeUtil';
+import { Itinerario, LocationState, MAX_PASAJEROS, SearchParams } from '../../../search/utils/BuscarViajeUtil';
 import ReservaSteps from '../../components/ReservaSteps';
+import MapaAsientosVista from '../../components/MapaAsientos';
+import { crearViaje, mapaDeAsientos } from '../../services/ViajeService';
 import { MapaAsientos, PasajeroForm, TipoDocumento, mensajeError, soles } from '../../utils/ReservaUtil';
+import { btnPrimario, btnSecundario, campo, titulo } from '../../../../lib/estilos';
 
 const BORRADOR = 'reserbus_borrador';
-const MAX_PASAJEROS = 8;
 const vacio = (): PasajeroForm => ({ nombres: '', apellidos: '', tipo_documento: 'DNI', numero_documento: '' });
-const campo = 'w-full rounded-lg border-2 border-[#ccc] p-2 text-[14px]';
+const campoChico = `${campo} !rounded-xl !px-3 !py-2 !text-[0.92rem]`;
 
 // El borrador sobrevive a un refresh o a la redirección de Google (sessionStorage)
 function leerBorrador(state: Partial<LocationState> | null): { it: Itinerario; params: SearchParams } | null {
@@ -42,6 +46,7 @@ function Reserva() {
   }, [viajero?.id]);   // eslint-disable-line react-hooks/exhaustive-deps
   const [activo, setActivo] = useState(0);
   const [tramo, setTramo] = useState(0);
+  const [vista3d, setVista3d] = useState(() => typeof window !== 'undefined' && window.innerWidth >= 768);
   const [error, setError] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
   const [authMode, setAuthMode] = useState<AuthMode | null>(null);
@@ -49,17 +54,21 @@ function Reserva() {
 
   const cargarMapas = useCallback(async () => {
     try {
-      const res = await Promise.all(ids.map((id) => axios.get<MapaAsientos>(`/api/tramos-programados/${id}/asientos`)));
-      setMapas(Object.fromEntries(res.map((r, i) => [ids[i], r.data])));
+      const res = await Promise.all(ids.map((id) => mapaDeAsientos(id)));
+      setMapas(Object.fromEntries(res.map((r, i) => [ids[i], r])));
     } catch (e) { setError(mensajeError(e, 'No se pudo cargar el mapa de asientos.')); }
   }, [ids]);
   useEffect(() => { cargarMapas(); }, [cargarMapas]);
 
   if (!it || !borrador) {
     return (
-      <div><Header />
-        <p className="mt-10">No hay una búsqueda activa. <button className="cursor-pointer text-brand underline" onClick={() => navigate('/')}>Volver al inicio</button></p>
-      </div>
+      <Pagina ancho="max-w-[640px]">
+        <div className="py-24 text-center">
+          <h1 className={`${titulo} mb-3 text-[1.6rem]`}>No hay una búsqueda activa</h1>
+          <p className="mb-6 text-tinta-suave">Elige un viaje en los resultados para ver sus asientos.</p>
+          <button className={btnPrimario} onClick={() => navigate('/')}>Buscar un viaje</button>
+        </div>
+      </Pagina>
     );
   }
 
@@ -72,8 +81,11 @@ function Reserva() {
     return s ? `${s.empresa}: ${s.origen} → ${s.destino}${n > 1 ? ` (tramo ${pos}/${n})` : ''}` : `Tramo ${id}`;
   };
   const rangoDe = (m: MapaAsientos, fila: number) => m.rangos.find((r) => fila >= r.fila_desde && fila <= r.fila_hasta);
-  const tomadoPorOtro = (id: string, codigo: string, ip: number) =>
-    Object.entries(sel[id] ?? {}).some(([k, v]) => Number(k) !== ip && v === codigo);
+  // Índice del pasajero (distinto al activo) que ya eligió ese asiento en el tramo; null si nadie
+  const tomadoPor = (id: string, codigo: string, ip: number): number | null => {
+    const e = Object.entries(sel[id] ?? {}).find(([k, v]) => Number(k) !== ip && v === codigo);
+    return e ? Number(e[0]) : null;
+  };
 
   const elegir = (id: string, codigo: string) => {
     setError(null);
@@ -105,7 +117,7 @@ function Reserva() {
       const p = pasajeros[i];
       if (!p.nombres.trim() || !p.apellidos.trim()) return `Pasajero ${i + 1}: completa nombres y apellidos.`;
       const okDoc = p.tipo_documento === 'DNI' ? /^\d{8}$/.test(p.numero_documento) : /^[A-Za-z0-9]{6,20}$/.test(p.numero_documento);
-      if (!okDoc) return `Pasajero ${i + 1}: documento inválido${p.tipo_documento === 'DNI' ? ' (8 dígitos)' : ''}.`;
+      if (!okDoc) return `Pasajero ${i + 1}: documento inválido${p.tipo_documento === 'DNI' ? ' (el DNI tiene 8 dígitos)' : ''}.`;
       const k = `${p.tipo_documento}-${p.numero_documento}`;
       if (docs.has(k)) return 'Hay pasajeros con el mismo documento.';
       docs.add(k);
@@ -129,7 +141,7 @@ function Reserva() {
     if (problema) return setError(problema);
     setEnviando(true); setError(null);
     try {
-      const { data } = await axios.post('/api/viajes', {
+      const data = await crearViaje({
         tramos_programados: ids.map(Number),
         pasajeros: pasajeros.map((p, i) => ({
           ...p,
@@ -151,112 +163,97 @@ function Reserva() {
   const esViajero = clientType === 'VIAJERO';
 
   return (
-    <div>
-      <Header />
+    <Pagina>
       <ReservaSteps paso={2} />
-      <p className="my-2 text-[#444]"><strong>Ruta:</strong> {borrador.params.origen} → {borrador.params.destino} · {borrador.params.fecha_salida}</p>
+      <p className="mb-6 text-center text-[0.98rem] text-tinta-suave">
+        <strong className="text-tinta">{borrador.params.origen} → {borrador.params.destino}</strong> · {borrador.params.fecha_salida}
+      </p>
 
-      <div className="flex flex-wrap items-start gap-8 px-8 pb-8">
+      <div className="grid items-start gap-6 pb-28 lg:grid-cols-[380px_1fr]">
         {/* PASAJEROS */}
-        <section className="w-[400px] text-left">
-          <h2 className="mb-3 text-[22px] font-bold text-brand">Pasajeros</h2>
+        <section aria-label="Pasajeros">
+          <h2 className={`${titulo} mb-3 text-[1.05rem]`}>Pasajeros</h2>
           {pasajeros.map((p, i) => (
             <div key={i} onClick={() => setActivo(i)}
-              className={`mb-3 cursor-pointer rounded-2xl border-2 bg-white p-4 ${activo === i ? 'border-brand' : 'border-[#ddd]'}`}>
-              <div className="mb-2 flex items-center justify-between font-bold">
-                <span>Pasajero {i + 1}{i === 0 && viajero && <span className="ml-1 text-[12px] font-normal text-[#777]">(tú)</span>}{activo === i && <span className="ml-2 text-[12px] font-normal text-brand">(eligiendo asiento)</span>}</span>
-                {pasajeros.length > 1 && !(i === 0 && viajero) && <button type="button" className="cursor-pointer border-0 bg-transparent text-[13px] text-red-600" onClick={(e) => { e.stopPropagation(); quitar(i); }}>Quitar</button>}
+              className={`mb-3 cursor-pointer rounded-3xl border-2 bg-white/85 p-4 transition ${activo === i ? 'border-senal shadow-[0_10px_30px_-12px_rgba(255,90,31,0.5)]' : 'border-brand/10 hover:border-brand/30'}`}>
+              <div className="mb-3 flex items-center justify-between gap-2">
+                <span className="flex items-center gap-2.5 font-bold">
+                  <span className={`flex h-8 w-8 items-center justify-center rounded-xl font-display text-[0.8rem] font-bold ${activo === i ? 'bg-senal text-tinta' : 'bg-brand text-white'}`}>P{i + 1}</span>
+                  {i === 0 && viajero ? 'Tú' : `Pasajero ${i + 1}`}
+                  {activo === i && <span className="text-[0.75rem] font-semibold text-senal-dark">eligiendo asiento</span>}
+                </span>
+                {pasajeros.length > 1 && !(i === 0 && viajero) && (
+                  <button type="button" aria-label={`Quitar pasajero ${i + 1}`} className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border-0 bg-transparent text-rose-600 transition hover:bg-rose-50"
+                    onClick={(e) => { e.stopPropagation(); quitar(i); }}><Trash2 className="h-4 w-4" /></button>
+                )}
               </div>
               <div className="grid grid-cols-2 gap-2">
-                <input className={`${campo} ${bloqueado(i, 'nombres') ? 'bg-[#f3f3f3] text-[#777]' : ''}`} disabled={bloqueado(i, 'nombres')} placeholder="Nombres" value={p.nombres} onChange={(e) => cambiar(i, 'nombres', e.target.value)} />
-                <input className={`${campo} ${bloqueado(i, 'apellidos') ? 'bg-[#f3f3f3] text-[#777]' : ''}`} disabled={bloqueado(i, 'apellidos')} placeholder="Apellidos" value={p.apellidos} onChange={(e) => cambiar(i, 'apellidos', e.target.value)} />
-                <select className={campo} value={p.tipo_documento} onChange={(e) => cambiar(i, 'tipo_documento', e.target.value as TipoDocumento)}>
+                <input aria-label={`Nombres del pasajero ${i + 1}`} className={campoChico} disabled={bloqueado(i, 'nombres')} placeholder="Nombres" value={p.nombres} onChange={(e) => cambiar(i, 'nombres', e.target.value)} />
+                <input aria-label={`Apellidos del pasajero ${i + 1}`} className={campoChico} disabled={bloqueado(i, 'apellidos')} placeholder="Apellidos" value={p.apellidos} onChange={(e) => cambiar(i, 'apellidos', e.target.value)} />
+                <select aria-label={`Tipo de documento del pasajero ${i + 1}`} className={campoChico} value={p.tipo_documento} onChange={(e) => cambiar(i, 'tipo_documento', e.target.value as TipoDocumento)}>
                   <option value="DNI">DNI</option><option value="CE">CE</option><option value="PASAPORTE">Pasaporte</option>
                 </select>
-                <input className={campo} placeholder="N.º de documento" value={p.numero_documento} onChange={(e) => cambiar(i, 'numero_documento', e.target.value.trim())} />
+                <input aria-label={`Número de documento del pasajero ${i + 1}`} className={campoChico} placeholder="N.º de documento" value={p.numero_documento} onChange={(e) => cambiar(i, 'numero_documento', e.target.value.trim())} />
               </div>
-              <div className="mt-2 text-[13px] text-[#555]">
-                {ids.map((id) => <div key={id}>{etiquetaTramo(id)}: <strong>{sel[id]?.[i] ?? '—'}</strong></div>)}
+              <div className="mt-3 flex flex-wrap gap-1.5">
+                {ids.map((id) => (
+                  <span key={id} className={`rounded-lg px-2.5 py-1 text-[0.75rem] font-semibold ${sel[id]?.[i] ? 'bg-brand-soft text-brand-dark' : 'bg-niebla text-tinta-suave'}`}>
+                    {ids.length > 1 ? `${seccionDe(id)?.origen ?? ''} → ${seccionDe(id)?.destino ?? ''}: ` : 'Asiento: '}<strong>{sel[id]?.[i] ?? 'sin elegir'}</strong>
+                  </span>
+                ))}
               </div>
             </div>
           ))}
-          <button type="button" className="cursor-pointer rounded-lg border-[1.5px] border-brand bg-white px-4 py-2 font-semibold text-brand disabled:opacity-50"
-            disabled={pasajeros.length >= MAX_PASAJEROS} onClick={agregar}>+ Agregar pasajero</button>
+          <button type="button" className={btnSecundario} disabled={pasajeros.length >= MAX_PASAJEROS} onClick={agregar}>
+            <Plus className="h-4 w-4" /> Agregar pasajero
+          </button>
         </section>
 
         {/* MAPA DE ASIENTOS */}
-        <section className="min-w-[360px] flex-1">
-          <div className="mb-3 flex flex-wrap justify-center gap-2">
-            {ids.map((id, i) => (
-              <button key={id} type="button" onClick={() => setTramo(i)}
-                className={`cursor-pointer rounded-[10px] border-0 px-4 py-2 text-[14px] font-medium ${i === tramo ? 'bg-brand text-white' : 'bg-[#f6f6ff] text-brand'}`}>
-                {etiquetaTramo(id)}
-              </button>
-            ))}
-          </div>
-          {!m ? <p>Cargando asientos…</p> : (
-            <div className="mx-auto w-fit rounded-[22px] border-[1.5px] border-[#bbb] bg-white p-5">
-              <div className="mb-3 text-[13px] text-[#777]">{m.tipo_bus} · Bus {m.placa} · {m.libres} libres</div>
-              <div className="flex flex-col gap-2">
-                {Array.from({ length: m.filas }, (_, f) => f + 1).map((fila) => {
-                  const r = rangoDe(m, fila);
-                  return (
-                    <div key={fila} className="flex items-center gap-2">
-                      <span className="w-5 text-right text-[12px] text-[#999]">{fila}</span>
-                      {m.columnas.map((col, ci) => {
-                        const codigo = `${fila}${col}`;
-                        const ocupado = m.ocupados.includes(codigo);
-                        const otro = tomadoPorOtro(idTramo, codigo, activo);
-                        const mio = sel[idTramo]?.[activo] === codigo;
-                        const clase = ocupado ? 'cursor-not-allowed bg-[#ddd] text-[#999]'
-                          : mio ? 'bg-brand text-white'
-                          : otro ? 'cursor-not-allowed bg-[#bda8f9] text-white'
-                          : 'cursor-pointer bg-white hover:border-brand';
-                        return (
-                          <span key={col} className="flex items-center gap-2">
-                            {ci === m.pasillo_despues_de && <span className="w-6" />}
-                            <button type="button" disabled={ocupado || otro} title={`${codigo}${r ? ` · ${r.nombre}${r.tarifa_extra ? ` (+${soles(r.tarifa_extra)})` : ''}` : ''}`}
-                              onClick={() => elegir(idTramo, codigo)}
-                              className={`h-10 w-10 rounded-lg border-2 border-[#ccc] text-[12px] font-semibold ${clase}`}>{codigo}</button>
-                          </span>
-                        );
-                      })}
-                      <span className="ml-2 text-[11px] text-[#999]">{r?.nombre}{r && r.tarifa_extra > 0 ? ` +${soles(r.tarifa_extra)}` : ''}</span>
-                    </div>
-                  );
-                })}
-              </div>
-              <div className="mt-4 flex flex-wrap gap-4 text-[12px] text-[#555]">
-                <span><i className="mr-1 inline-block h-3 w-3 border-2 border-[#ccc] bg-white" />Libre</span>
-                <span><i className="mr-1 inline-block h-3 w-3 bg-[#ddd]" />Ocupado</span>
-                <span><i className="mr-1 inline-block h-3 w-3 bg-brand" />Tu selección</span>
-                <span><i className="mr-1 inline-block h-3 w-3 bg-[#bda8f9]" />Otro pasajero</span>
-              </div>
+        <section aria-label="Mapa de asientos" className="vidrio min-w-0 rounded-[2rem] p-4 sm:p-6">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap gap-2">
+              {ids.map((id, i) => (
+                <button key={id} type="button" aria-pressed={i === tramo} onClick={() => setTramo(i)}
+                  className={`cursor-pointer rounded-xl border px-3.5 py-2 text-[0.85rem] font-semibold transition ${i === tramo ? 'border-brand bg-brand text-white' : 'border-brand/20 bg-white/80 text-brand hover:border-brand/50'}`}>
+                  {etiquetaTramo(id)}
+                </button>
+              ))}
             </div>
+            <button type="button" aria-pressed={vista3d} onClick={() => setVista3d((v) => !v)} className={`${btnSecundario} !px-3.5 !py-2 !text-[0.85rem]`}>
+              {vista3d ? <Square className="h-4 w-4" /> : <Box className="h-4 w-4" />} {vista3d ? 'Vista plana' : 'Vista 3D'}
+            </button>
+          </div>
+          {!m ? (error ? null : <Cargando texto="Cargando asientos…" />) : (
+            <>
+              <div className="text-center text-[0.85rem] font-semibold text-tinta-suave">{m.tipo_bus} · Bus {m.placa} · {m.libres} libres</div>
+              <MapaAsientosVista mapa={m} vista3d={vista3d} elegido={sel[idTramo]?.[activo]}
+                ocupadoPorOtro={(c) => tomadoPor(idTramo, c, activo)} onElegir={(c) => elegir(idTramo, c)} />
+            </>
           )}
         </section>
       </div>
 
       {/* BARRA INFERIOR */}
-      <div className="sticky bottom-0 flex flex-wrap items-center justify-between gap-4 border-t border-[#eee] bg-white px-8 py-4 shadow-[0_-2px_6px_rgba(0,0,0,0.06)]">
-        <div className="text-left">
-          <div className="text-[13px] text-[#777]">Total estimado ({pasajeros.length} pasajero{pasajeros.length > 1 ? 's' : ''})</div>
-          <div className="text-[22px] font-bold">{soles(estimado)}</div>
+      <div className="fixed inset-x-0 bottom-0 z-50 px-3 pb-3 sm:px-6">
+        <div className="vidrio mx-auto flex max-w-[1280px] flex-wrap items-center justify-between gap-x-6 gap-y-3 rounded-2xl px-5 py-3">
+          <div>
+            <div className="text-[0.78rem] font-semibold text-tinta-suave">Total estimado · {pasajeros.length} pasajero{pasajeros.length > 1 ? 's' : ''}</div>
+            <div className="font-display text-[1.5rem] font-bold leading-tight">{soles(estimado)}</div>
+          </div>
+          <div className="min-w-0 flex-1">{error && <Aviso tipo="error">{error}</Aviso>}</div>
+          {esViajero ? (
+            <button className={btnPrimario} disabled={enviando} onClick={continuar}>{enviando ? 'Reservando…' : 'Continuar'}</button>
+          ) : (
+            <button className={btnPrimario} disabled={loading || !!clientType} onClick={() => setAuthMode('signin')}>
+              {clientType ? 'Solo los viajeros pueden reservar' : 'Inicia sesión para continuar'}
+            </button>
+          )}
         </div>
-        <div className="flex-1 text-center text-[14px] font-bold text-red-600">{error}</div>
-        {esViajero ? (
-          <button className="cursor-pointer rounded-lg border-0 bg-brand px-8 py-3 text-[16px] text-white disabled:cursor-not-allowed disabled:bg-[#bda8f9]"
-            disabled={enviando} onClick={continuar}>{enviando ? 'Reservando…' : 'Continuar'}</button>
-        ) : (
-          <button className="cursor-pointer rounded-lg border-0 bg-brand px-8 py-3 text-[16px] text-white disabled:bg-[#bda8f9]"
-            disabled={loading} onClick={() => setAuthMode('signin')}>
-            {clientType ? 'Solo los viajeros pueden reservar' : 'Inicia sesión para continuar'}
-          </button>
-        )}
       </div>
       <AuthModals mode={authMode} initialEmail={authEmail} onClose={() => { setAuthMode(null); setAuthEmail(''); }}
         onSwitch={(mode, email) => { setAuthEmail(email); setAuthMode(mode); }} />
-    </div>
+    </Pagina>
   );
 }
 
