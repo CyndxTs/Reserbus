@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Box, Plus, Square, Trash2 } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 import Pagina from '../../../../components/layout/Pagina';
 import Aviso from '../../../../components/ui/Aviso';
 import Cargando from '../../../../components/ui/Cargando';
@@ -46,7 +46,6 @@ function Reserva() {
   }, [viajero?.id]);   // eslint-disable-line react-hooks/exhaustive-deps
   const [activo, setActivo] = useState(0);
   const [tramo, setTramo] = useState(0);
-  const [vista3d, setVista3d] = useState(() => typeof window !== 'undefined' && window.innerWidth >= 768);
   const [error, setError] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
   const [authMode, setAuthMode] = useState<AuthMode | null>(null);
@@ -220,14 +219,11 @@ function Reserva() {
                 </button>
               ))}
             </div>
-            <button type="button" aria-pressed={vista3d} onClick={() => setVista3d((v) => !v)} className={`${btnSecundario} !px-3.5 !py-2 !text-[0.85rem]`}>
-              {vista3d ? <Square className="h-4 w-4" /> : <Box className="h-4 w-4" />} {vista3d ? 'Vista plana' : 'Vista 3D'}
-            </button>
           </div>
           {!m ? (error ? null : <Cargando texto="Cargando asientos…" />) : (
             <>
               <div className="text-center text-[0.85rem] font-semibold text-tinta-suave">{m.tipo_bus} · Bus {m.placa} · {m.libres} libres</div>
-              <MapaAsientosVista mapa={m} vista3d={vista3d} elegido={sel[idTramo]?.[activo]}
+              <MapaAsientosVista mapa={m} vista3d={false} elegido={sel[idTramo]?.[activo]}
                 ocupadoPorOtro={(c) => tomadoPor(idTramo, c, activo)} onElegir={(c) => elegir(idTramo, c)} />
             </>
           )}
